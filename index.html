@@ -585,6 +585,52 @@ justify-content:center;
 background:rgba(255,255,255,.22);
 }
 
+.lightbox-nav{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+background:rgba(255,255,255,.12);
+border:none;
+color:white;
+width:48px;
+height:48px;
+border-radius:50%;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:5;
+}
+
+.lightbox-nav:hover{
+background:rgba(255,255,255,.22);
+}
+
+.lightbox-prev{left:18px;}
+.lightbox-next{right:18px;}
+
+.lightbox-counter{
+position:absolute;
+bottom:22px;
+left:50%;
+transform:translateX(-50%);
+color:white;
+font-size:13px;
+font-weight:600;
+background:rgba(255,255,255,.12);
+padding:5px 14px;
+border-radius:14px;
+}
+
+@media (pointer:coarse){
+.lightbox-nav{
+width:44px;
+height:44px;
+}
+.lightbox-prev{left:8px;}
+.lightbox-next{right:8px;}
+}
+
 .toast{
 position:fixed;
 bottom:26px;
@@ -826,7 +872,6 @@ height:38px;
 <input type="text" id="searchInput" placeholder="Rechercher dans le Drive">
 </div>
 <div class="sync-status" id="syncStatus"><span class="sync-dot"></span><span id="syncStatusLabel" class="sync-label-text">Connexion…</span></div>
-<div class="avatar">MF</div>
 </div>
 
 <div class="body">
@@ -860,7 +905,14 @@ height:38px;
 
 <div class="lightbox" id="lightbox">
 <button class="lightbox-close" id="lightboxClose">&times;</button>
+<button class="lightbox-nav lightbox-prev" id="lightboxPrev">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
 <img id="lightboxImg" src="">
+<button class="lightbox-nav lightbox-next" id="lightboxNext">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 6L15 12L9 18" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<div class="lightbox-counter" id="lightboxCounter"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1124,7 +1176,7 @@ function renderSidebar(){
 
 /* ---------- NAVIGATION ---------- */
 
-function navigate(key){
+function navigate(key, pushHistory = true){
   currentCategory = key;
   searchTerm = "";
   const input = document.getElementById("searchInput");
@@ -1138,7 +1190,15 @@ function navigate(key){
   renderSidebar();
   renderCurrentView();
   closeSidebar();
+  if(pushHistory){
+    history.pushState({category:key}, "", key ? "#" + key : "#");
+  }
 }
+
+window.addEventListener("popstate", (e) => {
+  const key = e.state ? e.state.category : null;
+  navigate(key, false);
+});
 
 function closeSidebar(){
   document.querySelector(".sidebar").classList.remove("open");
@@ -1156,7 +1216,7 @@ function renderHome(){
 
   main.innerHTML = `
     <div class="breadcrumb">Mon Drive</div>
-    <div class="subhead">Bibliothèque fournisseurs &amp; documents techniques</div>
+    <div class="subhead">Photos de réalisation</div>
     <div class="folder-grid" id="folderGrid"></div>
   `;
 
@@ -1209,6 +1269,7 @@ function renderCategory(key){
   document.getElementById("crumbHome").addEventListener("click", () => navigate(null));
 
   const grid = document.getElementById("fileGrid");
+  const imageUrls = files.filter(f => f.type && f.type.startsWith("image/")).map(f => f.dataURL);
 
   const addTile = document.createElement("div");
   addTile.className = "add-tile";
@@ -1245,7 +1306,7 @@ function renderCategory(key){
 
     card.addEventListener("click", (e) => {
       if(e.target.closest(".kebab") || e.target.closest(".kebab-menu")) return;
-      if(isImage) openLightbox(f.dataURL);
+      if(isImage) openLightbox(imageUrls, imageUrls.indexOf(f.dataURL));
     });
 
     const kebabBtn = card.querySelector(".kebab");
@@ -1260,7 +1321,7 @@ function renderCategory(key){
     card.querySelector(".preview-item").addEventListener("click", (e) => {
       e.stopPropagation();
       menu.classList.remove("show");
-      if(isImage) openLightbox(f.dataURL);
+      if(isImage) openLightbox(imageUrls, imageUrls.indexOf(f.dataURL));
     });
 
     card.querySelector(".delete-item").addEventListener("click", async (e) => {
@@ -1330,9 +1391,31 @@ async function deleteFileEverywhere(id){
 
 /* ---------- LIGHTBOX ---------- */
 
-function openLightbox(url){
-  document.getElementById("lightboxImg").src = url;
+let lightboxImages = [];
+let lightboxIndex = 0;
+
+function openLightbox(images, index){
+  lightboxImages = images;
+  lightboxIndex = index;
+  showLightboxImage();
   document.getElementById("lightbox").classList.add("show");
+}
+function showLightboxImage(){
+  document.getElementById("lightboxImg").src = lightboxImages[lightboxIndex];
+  const hasMultiple = lightboxImages.length > 1;
+  document.getElementById("lightboxPrev").style.display = hasMultiple ? "flex" : "none";
+  document.getElementById("lightboxNext").style.display = hasMultiple ? "flex" : "none";
+  document.getElementById("lightboxCounter").textContent = hasMultiple ? (lightboxIndex + 1) + " / " + lightboxImages.length : "";
+}
+function lightboxPrev(){
+  if(lightboxImages.length < 2) return;
+  lightboxIndex = (lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+  showLightboxImage();
+}
+function lightboxNext(){
+  if(lightboxImages.length < 2) return;
+  lightboxIndex = (lightboxIndex + 1) % lightboxImages.length;
+  showLightboxImage();
 }
 function closeLightbox(){
   document.getElementById("lightbox").classList.remove("show");
@@ -1366,9 +1449,37 @@ document.getElementById("lightboxClose").addEventListener("click", closeLightbox
 document.getElementById("lightbox").addEventListener("click", (e) => {
   if(e.target.id === "lightbox") closeLightbox();
 });
-document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape") closeLightbox();
+document.getElementById("lightboxPrev").addEventListener("click", (e) => {
+  e.stopPropagation();
+  lightboxPrev();
 });
+document.getElementById("lightboxNext").addEventListener("click", (e) => {
+  e.stopPropagation();
+  lightboxNext();
+});
+document.addEventListener("keydown", (e) => {
+  if(!document.getElementById("lightbox").classList.contains("show")) return;
+  if(e.key === "Escape") closeLightbox();
+  if(e.key === "ArrowLeft") lightboxPrev();
+  if(e.key === "ArrowRight") lightboxNext();
+});
+
+/* swipe tactile (tablette / mobile) */
+(function(){
+  const lb = document.getElementById("lightbox");
+  let touchStartX = 0, touchStartY = 0;
+  lb.addEventListener("touchstart", (e) => {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, {passive:true});
+  lb.addEventListener("touchend", (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+      if(dx < 0) lightboxNext(); else lightboxPrev();
+    }
+  }, {passive:true});
+})();
 
 document.addEventListener("click", (e) => {
   if(!e.target.closest(".kebab") && !e.target.closest(".kebab-menu")){
@@ -1387,6 +1498,7 @@ if("serviceWorker" in navigator){
 /* ---------- INIT ---------- */
 
 setSyncStatus(navigator.onLine ? "syncing" : "offline", navigator.onLine ? "Connexion…" : "Hors-ligne (cache local)");
+history.replaceState({category:null}, "", "#");
 renderSidebar();
 renderHome();
 initFirebase();
