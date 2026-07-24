@@ -473,6 +473,112 @@ background:var(--bg);
 color:#c0392b;
 }
 
+/* ---------- MENU CONTEXTUEL (CLIC DROIT SUR LA GRILLE) ---------- */
+
+.grid-context-menu{
+position:fixed;
+z-index:150;
+min-width:220px;
+}
+
+.grid-context-menu button svg{
+flex-shrink:0;
+}
+
+/* SUBFOLDER CARD (regroupement dans un dossier) */
+
+.subfolder-card .file-thumb{
+background:linear-gradient(135deg, #0b3d70, #062b55);
+}
+
+.subfolder-card .file-thumb svg path{
+fill:white;
+}
+
+/* MODALE "NOUVEAU DOSSIER" */
+
+.modal-overlay{
+position:fixed;
+inset:0;
+background:rgba(6,17,32,.5);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:160;
+padding:20px;
+}
+
+.modal-overlay.show{
+display:flex;
+}
+
+.modal-box{
+background:white;
+border-radius:10px;
+padding:22px;
+width:100%;
+max-width:360px;
+box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+
+.modal-title{
+font-size:15px;
+font-weight:700;
+color:var(--text);
+margin-bottom:14px;
+}
+
+.modal-input{
+width:100%;
+border:1px solid var(--border);
+border-radius:6px;
+padding:10px 12px;
+font-size:13.5px;
+outline:none;
+font-family:inherit;
+color:var(--text);
+}
+
+.modal-input:focus{
+border-color:var(--navy);
+}
+
+.modal-actions{
+display:flex;
+justify-content:flex-end;
+gap:10px;
+margin-top:18px;
+}
+
+.modal-btn-secondary,
+.modal-btn-primary{
+border:none;
+border-radius:20px;
+padding:9px 18px;
+font-size:13px;
+font-weight:600;
+cursor:pointer;
+font-family:inherit;
+}
+
+.modal-btn-secondary{
+background:var(--bg);
+color:var(--text);
+}
+
+.modal-btn-secondary:hover{
+background:var(--navy-soft);
+}
+
+.modal-btn-primary{
+background:var(--navy);
+color:white;
+}
+
+.modal-btn-primary:hover{
+background:var(--navy-light);
+}
+
 /* ADD / DROPZONE TILE */
 
 .add-tile{
@@ -1236,6 +1342,28 @@ height:38px;
 </div>
 </div>
 
+<div class="kebab-menu grid-context-menu" id="gridContextMenu">
+<button id="ctxImportFiles">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L19 7V20C19 21.1046 18.1046 22 17 22H6C4.89543 22 4 21.1046 4 20V4C4 2.89543 4.89543 2 6 2Z" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2V7H19" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/></svg>
+<span>Importer des fichiers</span>
+</button>
+<button id="ctxNewFolder">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H9.5L11.5 7H19.5C20.3284 7 21 7.67157 21 8.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 11V16M9.5 13.5H14.5" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round"/></svg>
+<span>Nouveau dossier</span>
+</button>
+</div>
+
+<div class="modal-overlay" id="folderModalOverlay">
+<div class="modal-box">
+<div class="modal-title">Nouveau dossier</div>
+<input type="text" id="folderNameInput" class="modal-input" placeholder="Nom du dossier (ex: Maison Dupont)" maxlength="80">
+<div class="modal-actions">
+<button class="modal-btn-secondary" id="folderModalCancel">Annuler</button>
+<button class="modal-btn-primary" id="folderModalCreate">Créer</button>
+</div>
+</div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 
@@ -1476,6 +1604,7 @@ function setSyncStatus(state, label){
 /* ---------- STATE ---------- */
 
 let currentCategory = null;
+let currentFolder = null;
 let searchTerm = "";
 let categoriesExpanded = false;
 
@@ -1505,9 +1634,37 @@ function getFilesByCategory(category){
     .sort((a,b) => b.date - a.date);
 }
 
+function isFolderMarker(f){
+  return f.type === "folder";
+}
+
+function getRootFiles(category){
+  return getFilesByCategory(category).filter(f => !f.folder && !isFolderMarker(f));
+}
+
+function getFolderFiles(category, folder){
+  return getFilesByCategory(category).filter(f => f.folder === folder);
+}
+
+function getSubfolders(category){
+  const map = {};
+  getFilesByCategory(category).forEach(f => {
+    if(isFolderMarker(f)){
+      if(!map[f.name]) map[f.name] = {name:f.name, id:f.id, files:[]};
+    }else if(f.folder){
+      if(!map[f.folder]) map[f.folder] = {name:f.folder, id:null, files:[]};
+      map[f.folder].files.push(f);
+    }
+  });
+  return Object.keys(map).sort().map(name => map[name]);
+}
+
 function getAllCounts(){
   const counts = {};
-  allFiles.forEach(f => { counts[f.category] = (counts[f.category] || 0) + 1; });
+  allFiles.forEach(f => {
+    if(isFolderMarker(f)) return;
+    counts[f.category] = (counts[f.category] || 0) + 1;
+  });
   return counts;
 }
 
@@ -1568,6 +1725,7 @@ function toggleCategoriesAccordion(){
 
 function navigate(key, pushHistory = true){
   currentCategory = key;
+  currentFolder = null;
   searchTerm = "";
   const input = document.getElementById("searchInput");
   input.value = "";
@@ -1588,12 +1746,33 @@ function navigate(key, pushHistory = true){
 
 window.addEventListener("popstate", (e) => {
   const key = e.state ? e.state.category : null;
+  const folder = e.state ? (e.state.folder || null) : null;
   navigate(key, false);
+  currentFolder = folder;
+  renderCurrentView();
 });
 
 function closeSidebar(){
   document.querySelector(".sidebar").classList.remove("open");
   document.getElementById("sidebarOverlay").classList.remove("show");
+}
+
+/* ---------- SOUS-DOSSIERS (regrouper les photos d'une même réalisation) ---------- */
+
+function openFolder(name){
+  currentFolder = name;
+  searchTerm = "";
+  document.getElementById("searchInput").value = "";
+  renderCurrentView();
+  history.pushState({category:currentCategory, folder:name}, "", "#" + currentCategory + "/" + encodeURIComponent(name));
+}
+
+function exitFolder(){
+  currentFolder = null;
+  searchTerm = "";
+  document.getElementById("searchInput").value = "";
+  renderCurrentView();
+  history.pushState({category:currentCategory, folder:null}, "", "#" + currentCategory);
 }
 
 /* ---------- HOME VIEW ---------- */
@@ -1643,22 +1822,30 @@ function renderHome(){
 function renderCategory(key){
   const cat = categories.find(c => c.key === key);
   const main = document.getElementById("main");
-  const files = getFilesByCategory(key).filter(f =>
+  const isCatalogCategory = key === "catalogues-fournisseurs";
+  const folder = isCatalogCategory ? null : currentFolder;
+
+  const files = (folder ? getFolderFiles(key, folder) : getRootFiles(key)).filter(f =>
     f.name.toLowerCase().includes(searchTerm)
   );
-  const isCatalogCategory = key === "catalogues-fournisseurs";
+  const subfolders = folder ? [] : getSubfolders(key).filter(sf =>
+    sf.name.toLowerCase().includes(searchTerm)
+  );
 
   main.innerHTML = `
     <div class="breadcrumb">
       <span class="crumb-link" id="crumbHome">Mon Drive</span>
       <span class="sep">›</span>
-      <span>${cat.name}</span>
+      ${folder ? `<span class="crumb-link" id="crumbCategory">${cat.name}</span><span class="sep">›</span><span>${folder}</span>` : `<span>${cat.name}</span>`}
     </div>
-    <div class="subhead">${cat.sub}</div>
+    <div class="subhead">${folder ? "" : cat.sub}</div>
     <div class="file-grid" id="fileGrid"></div>
   `;
 
   document.getElementById("crumbHome").addEventListener("click", () => navigate(null));
+  if(folder){
+    document.getElementById("crumbCategory").addEventListener("click", () => exitFolder());
+  }
 
   const grid = document.getElementById("fileGrid");
   const imageUrls = files.filter(f => f.type && f.type.startsWith("image/")).map(f => f.dataURL);
@@ -1671,6 +1858,57 @@ function renderCategory(key){
   `;
   addTile.addEventListener("click", () => document.getElementById("fileInput").click());
   grid.appendChild(addTile);
+
+  subfolders.forEach(sf => {
+    const cover = sf.files.find(f => f.type && f.type.startsWith("image/"));
+    const card = document.createElement("div");
+    card.className = "file-card subfolder-card";
+    card.innerHTML = `
+      <div class="file-thumb">
+        ${cover ? `<img src="${cover.dataURL}">` : folderIconSVG().replace('width="30" height="30"','width="36" height="36"')}
+      </div>
+      <div class="file-meta">
+        <div class="fn">${sf.name}</div>
+        <div class="fd">${sf.files.length === 0 ? "Dossier vide" : sf.files.length + " photo" + (sf.files.length > 1 ? "s" : "")}</div>
+      </div>
+      <button class="kebab">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.6" fill="#5f6368"/><circle cx="12" cy="12" r="1.6" fill="#5f6368"/><circle cx="12" cy="19" r="1.6" fill="#5f6368"/></svg>
+      </button>
+      <div class="kebab-menu">
+        <button class="rename-folder-item">Renommer</button>
+        <button class="danger delete-folder-item">Supprimer</button>
+      </div>
+    `;
+
+    card.addEventListener("click", (e) => {
+      if(e.target.closest(".kebab") || e.target.closest(".kebab-menu")) return;
+      if(e.target.closest(".fn-input")) return;
+      openFolder(sf.name);
+    });
+
+    const fKebabBtn = card.querySelector(".kebab");
+    const fMenu = card.querySelector(".kebab-menu");
+
+    fKebabBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.querySelectorAll(".kebab-menu.show").forEach(m => { if(m !== fMenu) m.classList.remove("show"); });
+      fMenu.classList.toggle("show");
+    });
+
+    card.querySelector(".rename-folder-item").addEventListener("click", (e) => {
+      e.stopPropagation();
+      fMenu.classList.remove("show");
+      startRenameFolder(card, key, sf);
+    });
+
+    card.querySelector(".delete-folder-item").addEventListener("click", async (e) => {
+      e.stopPropagation();
+      fMenu.classList.remove("show");
+      await deleteFolder(sf);
+    });
+
+    grid.appendChild(card);
+  });
 
   files.forEach(f => {
     const card = document.createElement("div");
@@ -1742,8 +1980,34 @@ function renderCategory(key){
   grid.addEventListener("drop", async (e) => {
     e.preventDefault();
     grid.classList.remove("drag-over");
-    await handleFiles(e.dataTransfer.files, key);
+    await handleFiles(e.dataTransfer.files, key, folder);
   });
+
+  if(!isCatalogCategory){
+    grid.addEventListener("contextmenu", (e) => {
+      if(e.target.closest(".file-card")) return;
+      e.preventDefault();
+      openGridContextMenu(e.clientX, e.clientY, !folder);
+    });
+  }
+}
+
+/* ---------- MENU CONTEXTUEL (CLIC DROIT SUR LA GRILLE) ---------- */
+
+function openGridContextMenu(x, y, showFolderOption){
+  const menu = document.getElementById("gridContextMenu");
+  document.getElementById("ctxNewFolder").style.display = showFolderOption ? "flex" : "none";
+  document.querySelectorAll(".kebab-menu.show").forEach(m => m.classList.remove("show"));
+  const menuWidth = 220, menuHeight = showFolderOption ? 84 : 44;
+  const left = Math.min(x, window.innerWidth - menuWidth - 10);
+  const top = Math.min(y, window.innerHeight - menuHeight - 10);
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  menu.classList.add("show");
+}
+
+function closeGridContextMenu(){
+  document.getElementById("gridContextMenu").classList.remove("show");
 }
 
 /* ---------- RENOMMER UN FICHIER ---------- */
@@ -1795,7 +2059,7 @@ function startRename(card, file){
 
 /* ---------- ENVOI (compression -> Firestore) ---------- */
 
-async function handleFiles(fileList, key){
+async function handleFiles(fileList, key, folder = null){
   const files = Array.from(fileList || []);
   if(files.length === 0) return;
 
@@ -1813,11 +2077,12 @@ async function handleFiles(fileList, key){
         okCount++;
         continue;
       }
+      if(file.type && !file.type.startsWith("image/") && file.type !== "application/pdf") continue;
       const {dataURL, type} = await prepareFileForUpload(file);
       const id = crypto.randomUUID();
       await fbFns.setDoc(fbFns.doc(db, "files", id), {
         category:key, name:file.name, size:dataURL.length, type,
-        date:Date.now(), dataURL
+        date:Date.now(), dataURL, folder: folder || ""
       });
       okCount++;
     }catch(err){
@@ -1831,6 +2096,128 @@ async function handleFiles(fileList, key){
   }
   if(okCount > 0 && key !== "catalogues-fournisseurs"){
     showToast(okCount > 1 ? okCount + " fichiers envoyés" : "Fichier envoyé");
+  }
+}
+
+/* ---------- RENOMMER / SUPPRIMER UN SOUS-DOSSIER ---------- */
+
+function startRenameFolder(card, category, sf){
+  const fnEl = card.querySelector(".fn");
+  if(!fnEl) return;
+
+  const currentName = sf.name;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "fn-input";
+  input.value = currentName;
+
+  fnEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let finished = false;
+
+  const finish = async (save) => {
+    if(finished) return;
+    finished = true;
+    const newName = input.value.trim();
+    input.replaceWith(fnEl);
+    if(save && newName && newName !== currentName){
+      const clash = getSubfolders(category).some(o => o.name !== currentName && o.name.toLowerCase() === newName.toLowerCase());
+      if(clash){
+        showToast("Un dossier porte déjà ce nom");
+        fnEl.textContent = currentName;
+        return;
+      }
+      fnEl.textContent = newName;
+      try{
+        await Promise.all(sf.files.map(f => fbFns.updateDoc(fbFns.doc(db, "files", f.id), {folder:newName})));
+        if(sf.id){
+          await fbFns.updateDoc(fbFns.doc(db, "files", sf.id), {name:newName});
+        }
+        showToast("Dossier renommé");
+      }catch(err){
+        console.error(err);
+        fnEl.textContent = currentName;
+        showToast("Impossible de renommer (repasse en ligne et réessaie)");
+      }
+    }else{
+      fnEl.textContent = currentName;
+    }
+  };
+
+  input.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if(e.key === "Enter") finish(true);
+    if(e.key === "Escape") finish(false);
+  });
+  input.addEventListener("click", (e) => e.stopPropagation());
+  input.addEventListener("blur", () => finish(true));
+}
+
+async function deleteFolder(sf){
+  const ok = window.confirm(
+    sf.files.length > 0
+      ? `Supprimer le dossier "${sf.name}" et ${sf.files.length} photo${sf.files.length > 1 ? "s" : ""} qu'il contient ? Cette action est irréversible.`
+      : `Supprimer le dossier "${sf.name}" ?`
+  );
+  if(!ok) return;
+  try{
+    for(const f of sf.files){
+      await deleteFileEverywhere(f);
+    }
+    if(sf.id){
+      await fbFns.deleteDoc(fbFns.doc(db, "files", sf.id));
+    }
+    showToast("Dossier supprimé");
+  }catch(err){
+    console.error(err);
+    showToast("Erreur lors de la suppression du dossier");
+  }
+}
+
+/* ---------- CRÉATION D'UN DOSSIER (menu contextuel) ---------- */
+
+let pendingFolderCategory = null;
+
+function openCreateFolderModal(category){
+  pendingFolderCategory = category;
+  const input = document.getElementById("folderNameInput");
+  input.value = "";
+  document.getElementById("folderModalOverlay").classList.add("show");
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeCreateFolderModal(){
+  document.getElementById("folderModalOverlay").classList.remove("show");
+  pendingFolderCategory = null;
+}
+
+async function confirmCreateFolder(){
+  const input = document.getElementById("folderNameInput");
+  const name = input.value.trim();
+  if(!name){
+    showToast("Merci d'indiquer un nom de dossier");
+    return;
+  }
+  if(!pendingFolderCategory) return;
+  const clash = getSubfolders(pendingFolderCategory).some(sf => sf.name.toLowerCase() === name.toLowerCase());
+  if(clash){
+    showToast("Un dossier porte déjà ce nom");
+    return;
+  }
+  if(!db){
+    showToast("Firebase pas encore connecté, réessaie dans un instant");
+    return;
+  }
+  try{
+    const id = crypto.randomUUID();
+    await fbFns.setDoc(fbFns.doc(db, "files", id), {category:pendingFolderCategory, name, type:"folder", size:0, date:Date.now()});
+    showToast("Dossier créé");
+    closeCreateFolderModal();
+  }catch(err){
+    console.error(err);
+    showToast("Impossible de créer le dossier (réessaie)");
   }
 }
 
@@ -2090,8 +2477,28 @@ document.getElementById("menuToggle").addEventListener("click", () => {
 document.getElementById("sidebarOverlay").addEventListener("click", closeSidebar);
 
 document.getElementById("fileInput").addEventListener("change", async (e) => {
-  await handleFiles(e.target.files, currentCategory);
+  await handleFiles(e.target.files, currentCategory, currentFolder);
   e.target.value = "";
+});
+
+document.getElementById("ctxImportFiles").addEventListener("click", () => {
+  closeGridContextMenu();
+  document.getElementById("fileInput").click();
+});
+document.getElementById("ctxNewFolder").addEventListener("click", () => {
+  closeGridContextMenu();
+  openCreateFolderModal(currentCategory);
+});
+
+document.getElementById("folderModalCancel").addEventListener("click", closeCreateFolderModal);
+document.getElementById("folderModalCreate").addEventListener("click", confirmCreateFolder);
+document.getElementById("folderModalOverlay").addEventListener("click", (e) => {
+  if(e.target.id === "folderModalOverlay") closeCreateFolderModal();
+});
+document.getElementById("folderNameInput").addEventListener("keydown", (e) => {
+  e.stopPropagation();
+  if(e.key === "Enter") confirmCreateFolder();
+  if(e.key === "Escape") closeCreateFolderModal();
 });
 
 document.getElementById("searchInput").addEventListener("input", (e) => {
@@ -2176,6 +2583,9 @@ document.addEventListener("click", (e) => {
     document.querySelectorAll(".kebab-menu.show").forEach(m => m.classList.remove("show"));
   }
 });
+
+document.addEventListener("scroll", closeGridContextMenu, true);
+window.addEventListener("resize", closeGridContextMenu);
 
 /* ---------- SERVICE WORKER (installabilité + cache app shell) ---------- */
 
