@@ -1434,7 +1434,8 @@ async function initFirebase(){
       onSnapshot: firestoreMod.onSnapshot,
       query: firestoreMod.query,
       where: firestoreMod.where,
-      getDocs: firestoreMod.getDocs
+      getDocs: firestoreMod.getDocs,
+      deleteField: firestoreMod.deleteField
     };
     listenToFiles();
   }catch(err){
@@ -1466,6 +1467,54 @@ function listenToFiles(){
     console.error(err);
     setSyncStatus("offline", "Hors-ligne (cache local)");
   });
+}
+
+async function setCategoryCover(category, fileId){
+  try{
+    await fbFns.setDoc(fbFns.doc(db, "files", "catcover_" + category), {
+      category, type:"categoryCover", coverId:fileId, size:0, date:Date.now(), name:"Couverture"
+    }, {merge:true});
+    showToast("Photo de couverture définie");
+  }catch(err){
+    console.error(err);
+    showToast("Impossible de définir la couverture (réessaie)");
+  }
+}
+
+async function removeCategoryCover(category){
+  try{
+    await fbFns.deleteDoc(fbFns.doc(db, "files", "catcover_" + category));
+    showToast("Couverture réinitialisée");
+  }catch(err){
+    console.error(err);
+    showToast("Impossible de réinitialiser la couverture");
+  }
+}
+
+async function setFolderCover(folderMeta, category, folderName, fileId){
+  try{
+    if(folderMeta && folderMeta.id){
+      await fbFns.updateDoc(fbFns.doc(db, "files", folderMeta.id), {coverId:fileId});
+    }else{
+      const id = crypto.randomUUID();
+      await fbFns.setDoc(fbFns.doc(db, "files", id), {category, name:folderName, type:"folder", size:0, date:Date.now(), coverId:fileId});
+    }
+    showToast("Photo de couverture définie");
+  }catch(err){
+    console.error(err);
+    showToast("Impossible de définir la couverture (réessaie)");
+  }
+}
+
+async function removeFolderCover(folderMeta){
+  if(!folderMeta || !folderMeta.id) return;
+  try{
+    await fbFns.updateDoc(fbFns.doc(db, "files", folderMeta.id), {coverId: fbFns.deleteField ? fbFns.deleteField() : null});
+    showToast("Couverture réinitialisée");
+  }catch(err){
+    console.error(err);
+    showToast("Impossible de réinitialiser la couverture");
+  }
 }
 
 window.addEventListener("online", () => setSyncStatus("syncing", "Reconnexion…"));
@@ -1608,6 +1657,7 @@ let currentFolder = null;
 let searchTerm = "";
 let categoriesExpanded = false;
 
+
 /* ---------- HELPERS ---------- */
 
 function formatSize(bytes){
@@ -1638,8 +1688,12 @@ function isFolderMarker(f){
   return f.type === "folder";
 }
 
+function isMetaDoc(f){
+  return f.type === "folder" || f.type === "categoryCover";
+}
+
 function getRootFiles(category){
-  return getFilesByCategory(category).filter(f => !f.folder && !isFolderMarker(f));
+  return getFilesByCategory(category).filter(f => !f.folder && !isMetaDoc(f));
 }
 
 function getFolderFiles(category, folder){
@@ -1650,9 +1704,9 @@ function getSubfolders(category){
   const map = {};
   getFilesByCategory(category).forEach(f => {
     if(isFolderMarker(f)){
-      if(!map[f.name]) map[f.name] = {name:f.name, id:f.id, files:[]};
+      if(!map[f.name]) map[f.name] = {name:f.name, id:f.id, coverId:f.coverId || null, files:[]};
     }else if(f.folder){
-      if(!map[f.folder]) map[f.folder] = {name:f.folder, id:null, files:[]};
+      if(!map[f.folder]) map[f.folder] = {name:f.folder, id:null, coverId:null, files:[]};
       map[f.folder].files.push(f);
     }
   });
@@ -1662,13 +1716,23 @@ function getSubfolders(category){
 function getAllCounts(){
   const counts = {};
   allFiles.forEach(f => {
-    if(isFolderMarker(f)) return;
+    if(isMetaDoc(f)) return;
     counts[f.category] = (counts[f.category] || 0) + 1;
   });
   return counts;
 }
 
+function getCategoryCoverId(key){
+  const meta = allFiles.find(f => f.category === key && f.type === "categoryCover");
+  return meta ? meta.coverId : null;
+}
+
 function getCoverImage(key){
+  const chosenId = getCategoryCoverId(key);
+  if(chosenId){
+    const chosen = allFiles.find(f => f.id === chosenId && f.category === key);
+    if(chosen) return chosen.dataURL;
+  }
   const f = allFiles.find(f => f.category === key && ((f.type && f.type.startsWith("image/")) || f.type === "catalog"));
   return f ? f.dataURL : null;
 }
@@ -1724,11 +1788,14 @@ function toggleCategoriesAccordion(){
 /* ---------- NAVIGATION ---------- */
 
 function navigate(key, pushHistory = true){
+  const categoryChanged = key !== currentCategory;
   currentCategory = key;
   currentFolder = null;
-  searchTerm = "";
   const input = document.getElementById("searchInput");
-  input.value = "";
+  if(categoryChanged){
+    searchTerm = "";
+    input.value = "";
+  }
   if(key){
     const cat = categories.find(c => c.key === key);
     input.placeholder = "Rechercher dans " + cat.name + " (par nom de fichier)";
@@ -1761,16 +1828,12 @@ function closeSidebar(){
 
 function openFolder(name){
   currentFolder = name;
-  searchTerm = "";
-  document.getElementById("searchInput").value = "";
   renderCurrentView();
   history.pushState({category:currentCategory, folder:name}, "", "#" + currentCategory + "/" + encodeURIComponent(name));
 }
 
 function exitFolder(){
   currentFolder = null;
-  searchTerm = "";
-  document.getElementById("searchInput").value = "";
   renderCurrentView();
   history.pushState({category:currentCategory, folder:null}, "", "#" + currentCategory);
 }
@@ -1831,6 +1894,7 @@ function renderCategory(key){
   const subfolders = folder ? [] : getSubfolders(key).filter(sf =>
     sf.name.toLowerCase().includes(searchTerm)
   );
+  const folderMeta = folder ? (getSubfolders(key).find(s => s.name === folder) || null) : null;
 
   main.innerHTML = `
     <div class="breadcrumb">
@@ -1860,7 +1924,8 @@ function renderCategory(key){
   grid.appendChild(addTile);
 
   subfolders.forEach(sf => {
-    const cover = sf.files.find(f => f.type && f.type.startsWith("image/"));
+    const cover = (sf.coverId && sf.files.find(f => f.id === sf.coverId)) ||
+      sf.files.find(f => f.type && f.type.startsWith("image/"));
     const card = document.createElement("div");
     card.className = "file-card subfolder-card";
     card.innerHTML = `
@@ -1916,11 +1981,13 @@ function renderCategory(key){
 
     const isImage = f.type && f.type.startsWith("image/");
     const isCatalog = f.type === "catalog";
+    const isCurrentCover = isImage && (folder ? (folderMeta && folderMeta.coverId === f.id) : (getCategoryCoverId(key) === f.id));
 
     card.innerHTML = `
       <div class="file-thumb">
         ${f.pending ? '<span class="pending-badge">Envoi…</span>' : ""}
         ${isCatalog ? `<span class="pages-badge">${f.pageCount} pages</span>` : ""}
+        ${isCurrentCover ? `<span class="pages-badge">Couverture</span>` : ""}
         ${(isImage || isCatalog) ? `<img src="${f.dataURL}">` : fileTypeIconSVG()}
       </div>
       <div class="file-meta">
@@ -1932,6 +1999,7 @@ function renderCategory(key){
       </button>
       <div class="kebab-menu" data-id="${f.id}">
         <button class="preview-item">Aperçu</button>
+        ${isImage ? `<button class="cover-item">${isCurrentCover ? "Retirer la couverture" : "Définir comme couverture"}</button>` : ""}
         <button class="rename-item">Renommer</button>
         <button class="danger delete-item">Supprimer</button>
       </div>
@@ -1959,6 +2027,21 @@ function renderCategory(key){
       if(isCatalog) openFlipbook(f);
       else if(isImage) openLightbox(imageUrls, imageUrls.indexOf(f.dataURL));
     });
+
+    const coverBtn = card.querySelector(".cover-item");
+    if(coverBtn){
+      coverBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        menu.classList.remove("show");
+        if(folder){
+          if(isCurrentCover) await removeFolderCover(folderMeta);
+          else await setFolderCover(folderMeta, key, folder, f.id);
+        }else{
+          if(isCurrentCover) await removeCategoryCover(key);
+          else await setCategoryCover(key, f.id);
+        }
+      });
+    }
 
     card.querySelector(".rename-item").addEventListener("click", (e) => {
       e.stopPropagation();
