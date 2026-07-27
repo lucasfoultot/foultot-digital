@@ -1234,8 +1234,317 @@ height:38px;
 }
 }
 
+/* ================= SIMULATEUR DE FAÇADE IA ================= */
+
+.simulator-overlay{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(6,15,28,.72);
+z-index:60;
+align-items:center;
+justify-content:center;
+padding:24px;
+}
+.simulator-overlay.show{
+display:flex;
+}
+.simulator-panel{
+background:white;
+width:100%;
+max-width:1080px;
+max-height:92vh;
+border-radius:14px;
+overflow:auto;
+display:flex;
+flex-direction:column;
+}
+.simulator-topbar{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:16px 22px;
+border-bottom:1px solid var(--border);
+position:sticky;
+top:0;
+background:white;
+z-index:2;
+}
+.simulator-topbar h2{
+font-size:16px;
+font-weight:700;
+color:var(--navy);
+}
+.simulator-topbar span{
+display:block;
+font-size:12px;
+color:var(--text-secondary);
+font-weight:400;
+margin-top:2px;
+}
+.simulator-close{
+border:none;
+background:var(--navy-soft);
+color:var(--navy);
+width:32px;
+height:32px;
+border-radius:50%;
+font-size:18px;
+line-height:1;
+cursor:pointer;
+flex-shrink:0;
+}
+.simulator-body{
+display:grid;
+grid-template-columns:340px 1fr;
+gap:22px;
+padding:22px;
+}
+@media (max-width:760px){
+.simulator-body{
+grid-template-columns:1fr;
+}
+}
+.sim-step{
+margin-bottom:18px;
+}
+.sim-step-label{
+font-size:12.5px;
+font-weight:700;
+color:var(--navy);
+text-transform:uppercase;
+letter-spacing:.4px;
+margin-bottom:8px;
+display:flex;
+align-items:center;
+gap:6px;
+}
+.sim-step-label .sim-num{
+background:var(--navy);
+color:white;
+width:18px;
+height:18px;
+border-radius:50%;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+font-size:10.5px;
+}
+.sim-upload-zone{
+border:2px dashed var(--border);
+border-radius:10px;
+min-height:150px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:8px;
+cursor:pointer;
+color:var(--text-secondary);
+font-size:13px;
+text-align:center;
+padding:14px;
+background:var(--bg);
+overflow:hidden;
+position:relative;
+}
+.sim-upload-zone img{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+}
+.sim-upload-zone .sim-upload-hint{
+position:relative;
+z-index:1;
+}
+.sim-upload-actions{
+display:flex;
+gap:8px;
+margin-top:10px;
+}
+.sim-btn-secondary{
+flex:1;
+padding:9px;
+border-radius:8px;
+border:1px solid var(--border);
+background:white;
+color:var(--text);
+font-size:12.5px;
+font-weight:600;
+cursor:pointer;
+}
+.sim-select{
+width:100%;
+padding:10px 12px;
+border-radius:8px;
+border:1px solid var(--border);
+background:white;
+font-size:13.5px;
+color:var(--text);
+outline:none;
+}
+.sim-generate-btn{
+width:100%;
+margin-top:6px;
+padding:13px;
+border-radius:9px;
+border:none;
+background:var(--navy);
+color:white;
+font-size:14px;
+font-weight:700;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:8px;
+}
+.sim-generate-btn:disabled{
+opacity:.55;
+cursor:not-allowed;
+}
+.sim-result-area{
+border-radius:10px;
+background:var(--bg);
+min-height:320px;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+gap:14px;
+padding:16px;
+}
+.sim-placeholder{
+color:var(--text-secondary);
+font-size:13px;
+text-align:center;
+max-width:280px;
+}
+.sim-loader{
+display:none;
+flex-direction:column;
+align-items:center;
+gap:12px;
+}
+.sim-loader.show{
+display:flex;
+}
+.sim-spinner{
+width:38px;
+height:38px;
+border-radius:50%;
+border:3px solid var(--navy-soft);
+border-top-color:var(--navy);
+animation:sim-spin .8s linear infinite;
+}
+@keyframes sim-spin{
+to{transform:rotate(360deg);}
+}
+.sim-loader p{
+font-size:13px;
+color:var(--text-secondary);
+}
+
+/* comparateur avant / après */
+.ba-compare{
+position:relative;
+width:100%;
+aspect-ratio:4/3;
+border-radius:10px;
+overflow:hidden;
+background:#0d1b2a;
+user-select:none;
+touch-action:none;
+display:none;
+}
+.ba-compare.show{
+display:block;
+}
+.ba-img{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+pointer-events:none;
+}
+.ba-before-img{
+clip-path:inset(0 50% 0 0);
+}
+.ba-handle{
+position:absolute;
+top:0;
+bottom:0;
+left:50%;
+width:0;
+transform:translateX(-50%);
+pointer-events:none;
+}
+.ba-handle-line{
+position:absolute;
+top:0;
+bottom:0;
+left:50%;
+width:2px;
+background:white;
+transform:translateX(-50%);
+box-shadow:0 0 6px rgba(0,0,0,.4);
+}
+.ba-handle-btn{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:34px;
+height:34px;
+border-radius:50%;
+background:white;
+color:var(--navy);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:14px;
+font-weight:700;
+box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.ba-range{
+width:100%;
+margin-top:12px;
+accent-color:var(--navy);
+}
+.ba-label{
+position:absolute;
+top:10px;
+font-size:11px;
+font-weight:700;
+letter-spacing:.4px;
+color:white;
+background:rgba(6,15,28,.55);
+padding:3px 9px;
+border-radius:20px;
+z-index:2;
+}
+.ba-label-before{ left:10px; }
+.ba-label-after{ right:10px; }
+.sim-actions-row{
+display:flex;
+gap:10px;
+margin-top:14px;
+width:100%;
+}
+.sim-actions-row .sim-btn-secondary{
+display:none;
+}
+.sim-actions-row.show .sim-btn-secondary{
+display:block;
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://js.puter.com/v2/"></script>
 </head>
 
 <body>
@@ -1265,6 +1574,11 @@ height:38px;
 <div class="nav-item" id="homeNav" data-key="">
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3L21 10.5V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
 <span>Mon Drive</span>
+</div>
+
+<div class="nav-item" id="simulatorNav" data-key="">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+<span>Simulateur de façade IA</span>
 </div>
 
 <div class="nav-sep"></div>
@@ -1342,6 +1656,83 @@ height:38px;
 </div>
 </div>
 
+<div class="simulator-overlay" id="simulatorOverlay">
+<div class="simulator-panel">
+
+<div class="simulator-topbar">
+<div>
+<h2>Simulateur de façade IA</h2>
+<span>Visualisez le produit sur la façade du client, en quelques secondes</span>
+</div>
+<button class="simulator-close" id="simulatorClose">&times;</button>
+</div>
+
+<div class="simulator-body">
+
+<div class="sim-col-left">
+
+<div class="sim-step">
+<div class="sim-step-label"><span class="sim-num">1</span> Photo de la façade</div>
+<input type="file" id="simFileInput" accept="image/*" capture="environment" style="display:none">
+<div class="sim-upload-zone" id="simUploadZone">
+<img id="simUploadPreview" style="display:none">
+<div class="sim-upload-hint" id="simUploadHint">
+<div>📷</div>
+<div>Prendre une photo ou importer une image</div>
+</div>
+</div>
+<div class="sim-upload-actions">
+<button class="sim-btn-secondary" id="simRetakeBtn" style="display:none">Changer la photo</button>
+</div>
+</div>
+
+<div class="sim-step">
+<div class="sim-step-label"><span class="sim-num">2</span> Produit à simuler</div>
+<select class="sim-select" id="simProductSelect"></select>
+</div>
+
+<button class="sim-generate-btn" id="simGenerateBtn">✨ Générer le rendu</button>
+
+</div>
+
+<div class="sim-col-right">
+
+<div class="sim-result-area" id="simResultArea">
+
+<p class="sim-placeholder" id="simPlaceholder">Ajoutez une photo et choisissez un produit pour lancer la génération du rendu Avant / Après.</p>
+
+<div class="sim-loader" id="simLoader">
+<div class="sim-spinner"></div>
+<p>Génération du rendu par l'IA en cours…</p>
+</div>
+
+<div class="ba-compare" id="baCompare">
+<span class="ba-label ba-label-before">AVANT</span>
+<span class="ba-label ba-label-after">APRÈS</span>
+<img class="ba-img" id="baAfterImg">
+<img class="ba-img ba-before-img" id="baBeforeImg">
+<div class="ba-handle" id="baHandle">
+<div class="ba-handle-line"></div>
+<div class="ba-handle-btn">⇔</div>
+</div>
+</div>
+
+</div>
+
+<input type="range" class="ba-range" id="baRange" min="0" max="100" value="50" style="display:none">
+
+<div class="sim-actions-row" id="simActionsRow">
+<button class="sim-btn-secondary" id="simDownloadBtn">Télécharger le rendu</button>
+<button class="sim-btn-secondary" id="simRestartBtn">Nouvel essai</button>
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
 <div class="kebab-menu grid-context-menu" id="gridContextMenu">
 <button id="ctxImportFiles">
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L19 7V20C19 21.1046 18.1046 22 17 22H6C4.89543 22 4 21.1046 4 20V4C4 2.89543 4.89543 2 6 2Z" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2V7H19" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -1389,6 +1780,170 @@ const categories = [
 {key:"garde-corps", name:"Garde-corps", sub:"Cetal"},
 {key:"catalogues-fournisseurs", name:"Catalogues dématérialisés", sub:"Finstral • Inotherm • Moos • Brustor • Cetal • Roma • Gypass", standalone:true},
 ];
+
+/* ============================================================
+   SIMULATEUR DE FAÇADE IA — via Puter.js (gratuit, sans clé API)
+   ============================================================
+
+   Ce simulateur utilise Puter.js (https://js.puter.com/v2/, déjà
+   chargé dans le <head>) pour accéder au modèle d'édition d'image
+   Gemini "Nano Banana" GRATUITEMENT :
+   - Aucune clé API Google à gérer.
+   - Aucune facturation à activer.
+   - À la première utilisation, une petite fenêtre Puter peut
+     s'ouvrir pour se connecter (compte Puter gratuit, 1 clic).
+     C'est Puter qui prend en charge le coût de génération, pas toi.
+
+   (Le générateur de rendu Gemini "en direct" via clé API Google
+   reste possible plus tard si besoin, mais nécessite désormais
+   d'activer la facturation côté Google, celle-ci ayant coupé son
+   quota gratuit pour la génération d'images.)
+*/
+
+// Modèle Nano Banana utilisé pour l'édition de la photo de façade.
+const SIM_PUTER_MODEL = "google/gemini-2.5-flash-image";
+
+// Liste des produits proposés dans le simulateur : on réutilise le
+// catalogue "categories" déjà défini plus haut (hors catalogues fournisseurs).
+const SIM_PRODUCTS = categories.filter(c => !c.standalone);
+
+let simUploadedImage = null; // {base64, mimeType, dataUrl}
+let simResultDataUrl = null;
+
+/* ---------- Remplissage du <select> produit ---------- */
+function simPopulateProductSelect(){
+  const select = document.getElementById("simProductSelect");
+  select.innerHTML = "";
+  SIM_PRODUCTS.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.key;
+    opt.textContent = p.name + (p.sub ? " (" + p.sub + ")" : "");
+    select.appendChild(opt);
+  });
+}
+
+/* ---------- Conversion du fichier photo en Base64 ---------- */
+function simFileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result; // "data:image/jpeg;base64,XXXXX"
+      const base64 = dataUrl.split(",")[1];
+      resolve({base64, mimeType: file.type || "image/jpeg", dataUrl});
+    };
+    reader.onerror = () => reject(new Error("Impossible de lire le fichier image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- Construction du prompt envoyé à l'IA ---------- */
+function simBuildPrompt(productName){
+  return `Tu es un outil professionnel de retouche photo pour une entreprise de menuiserie (fenêtres, portes, pergolas, portails, volets...).
+À partir de la photo fournie, génère une nouvelle version photoréaliste de cette EXACTE façade, en remplaçant uniquement l'élément suivant par une version moderne et de qualité : "${productName}".
+
+Contraintes impératives :
+- Conserve strictement à l'identique le cadrage, l'angle de prise de vue, la perspective, la luminosité, les couleurs générales et tout le reste du décor (murs, toiture, végétation, sol, ciel).
+- Modifie uniquement "${productName}" visible sur la façade, rien d'autre.
+- Le résultat doit ressembler à une vraie photographie (pas un dessin, pas un rendu 3D stylisé, pas d'aspect "IA").
+- N'ajoute aucun texte, filigrane, logo ou habillage graphique sur l'image.
+- Conserve les mêmes dimensions d'image que la photo d'origine.`;
+}
+
+/* ---------- Gestion de l'état "chargement" ---------- */
+function simSetLoading(isLoading){
+  document.getElementById("simLoader").classList.toggle("show", isLoading);
+  document.getElementById("simGenerateBtn").disabled = isLoading;
+  document.getElementById("simGenerateBtn").textContent = isLoading ? "Génération en cours…" : "✨ Générer le rendu";
+  if(isLoading){
+    document.getElementById("simPlaceholder").style.display = "none";
+    document.getElementById("baCompare").classList.remove("show");
+    document.getElementById("baRange").style.display = "none";
+    document.getElementById("simActionsRow").classList.remove("show");
+  }
+}
+
+/* ---------- Affichage du résultat Avant / Après ---------- */
+function simShowResult(){
+  document.getElementById("simPlaceholder").style.display = "none";
+  document.getElementById("baBeforeImg").src = simUploadedImage.dataUrl;
+  document.getElementById("baAfterImg").src = simResultDataUrl;
+  document.getElementById("baCompare").classList.add("show");
+  document.getElementById("baRange").style.display = "block";
+  document.getElementById("baRange").value = 50;
+  simUpdateSliderPosition(50);
+  document.getElementById("simActionsRow").classList.add("show");
+}
+
+function simUpdateSliderPosition(value){
+  document.getElementById("baBeforeImg").style.clipPath = `inset(0 ${100 - value}% 0 0)`;
+  document.getElementById("baHandle").style.left = value + "%";
+}
+
+/* ---------- Appel de l'IA via Puter.js (gratuit) ---------- */
+async function simGenerateRender(){
+  if(!simUploadedImage){
+    alert("Merci d'ajouter une photo de la façade avant de générer le rendu.");
+    return;
+  }
+
+  const productKey = document.getElementById("simProductSelect").value;
+  const product = SIM_PRODUCTS.find(p => p.key === productKey);
+  if(!product){
+    alert("Merci de sélectionner un produit dans la liste.");
+    return;
+  }
+
+  if(!window.puter || !window.puter.ai || !window.puter.ai.txt2img){
+    alert("Le module Puter.js n'a pas pu se charger (vérifiez votre connexion Internet) — le simulateur ne peut pas fonctionner sans lui.");
+    return;
+  }
+
+  simSetLoading(true);
+
+  try{
+    const prompt = simBuildPrompt(product.name);
+
+    // puter.ai.txt2img() renvoie directement un élément <img> déjà chargé.
+    const resultImgEl = await puter.ai.txt2img(prompt, {
+      model: SIM_PUTER_MODEL,
+      input_image: simUploadedImage.base64,
+      input_image_mime_type: simUploadedImage.mimeType
+    });
+
+    simResultDataUrl = resultImgEl.src;
+    simShowResult();
+
+  }catch(err){
+    console.error(err);
+    alert("Une erreur est survenue lors de la génération du rendu :\n" + (err?.message || err));
+  }finally{
+    simSetLoading(false);
+  }
+}
+
+/* ---------- Ouverture / fermeture de la fenêtre simulateur ---------- */
+function openSimulator(){
+  document.getElementById("simulatorOverlay").classList.add("show");
+  closeSidebar();
+}
+function closeSimulator(){
+  document.getElementById("simulatorOverlay").classList.remove("show");
+}
+
+/* ---------- Réinitialisation complète (bouton "Nouvel essai") ---------- */
+function simReset(){
+  simUploadedImage = null;
+  simResultDataUrl = null;
+  document.getElementById("simUploadPreview").style.display = "none";
+  document.getElementById("simUploadPreview").src = "";
+  document.getElementById("simUploadHint").style.display = "flex";
+  document.getElementById("simRetakeBtn").style.display = "none";
+  document.getElementById("simPlaceholder").style.display = "block";
+  document.getElementById("baCompare").classList.remove("show");
+  document.getElementById("baRange").style.display = "none";
+  document.getElementById("simActionsRow").classList.remove("show");
+  document.getElementById("simFileInput").value = "";
+}
 
 /* ---------- CONFIG FIREBASE ---------- */
 
@@ -2551,6 +3106,57 @@ function closeFlipbook(){
 
 document.getElementById("homeNav").addEventListener("click", () => navigate(null));
 
+document.getElementById("simulatorNav").addEventListener("click", openSimulator);
+document.getElementById("simulatorClose").addEventListener("click", closeSimulator);
+document.getElementById("simulatorOverlay").addEventListener("click", (e) => {
+  if(e.target.id === "simulatorOverlay") closeSimulator();
+});
+
+document.getElementById("simUploadZone").addEventListener("click", () => {
+  document.getElementById("simFileInput").click();
+});
+document.getElementById("simRetakeBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("simFileInput").click();
+});
+
+document.getElementById("simFileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    simUploadedImage = await simFileToBase64(file);
+    const preview = document.getElementById("simUploadPreview");
+    preview.src = simUploadedImage.dataUrl;
+    preview.style.display = "block";
+    document.getElementById("simUploadHint").style.display = "none";
+    document.getElementById("simRetakeBtn").style.display = "block";
+  }catch(err){
+    console.error(err);
+    alert("Impossible de charger cette image, merci d'en choisir une autre.");
+  }
+});
+
+document.getElementById("simGenerateBtn").addEventListener("click", simGenerateRender);
+document.getElementById("simRestartBtn").addEventListener("click", simReset);
+
+document.getElementById("baRange").addEventListener("input", (e) => {
+  simUpdateSliderPosition(parseInt(e.target.value, 10));
+});
+
+document.getElementById("simDownloadBtn").addEventListener("click", () => {
+  if(!simResultDataUrl) return;
+  const a = document.createElement("a");
+  a.href = simResultDataUrl;
+  a.download = "simulation-facade-foultot.png";
+  a.click();
+});
+
+document.addEventListener("keydown", (e) => {
+  if(document.getElementById("simulatorOverlay").classList.contains("show") && e.key === "Escape"){
+    closeSimulator();
+  }
+});
+
 document.getElementById("realisationsHeader").addEventListener("click", toggleCategoriesAccordion);
 
 document.getElementById("menuToggle").addEventListener("click", () => {
@@ -2685,6 +3291,7 @@ history.replaceState({category:null}, "", "#");
 renderSidebar();
 renderHome();
 initFirebase();
+simPopulateProductSelect();
 
 </script>
 
