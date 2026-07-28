@@ -1305,6 +1305,52 @@ padding:22px;
 grid-template-columns:1fr;
 }
 }
+.sim-auth-banner{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+padding:10px 14px;
+border-radius:8px;
+margin:0 22px 4px;
+font-size:12.5px;
+font-weight:600;
+}
+.sim-auth-banner.signed-out{
+background:#fdf1e8;
+color:#8a4b12;
+border:1px solid #f3d8bc;
+}
+.sim-auth-banner.signed-in{
+background:#e9f6ee;
+color:#1f7a3d;
+border:1px solid #c7e9d3;
+}
+.sim-auth-banner.checking{
+background:var(--bg);
+color:var(--text-secondary);
+border:1px solid var(--border);
+}
+.sim-auth-signin-btn{
+border:none;
+border-radius:16px;
+padding:7px 16px;
+font-size:12px;
+font-weight:700;
+cursor:pointer;
+background:var(--navy);
+color:white;
+flex-shrink:0;
+white-space:nowrap;
+}
+.sim-auth-signin-btn:hover{
+background:var(--navy-light);
+}
+.sim-auth-signin-btn:disabled{
+opacity:.6;
+cursor:default;
+}
+
 .sim-step{
 margin-bottom:18px;
 }
@@ -1694,6 +1740,11 @@ display:block;
 <button class="simulator-close" id="simulatorClose">&times;</button>
 </div>
 
+<div class="sim-auth-banner checking" id="simAuthBanner">
+<span id="simAuthBannerText">Vérification de la connexion Puter…</span>
+<button class="sim-auth-signin-btn" id="simAuthSignInBtn" style="display:none">Se connecter à Puter</button>
+</div>
+
 <div class="simulator-body">
 
 <div class="sim-col-left">
@@ -2030,6 +2081,83 @@ function simUpdateSliderPosition(value){
   document.getElementById("baHandle").style.left = value + "%";
 }
 
+/* ============================================================
+   AUTHENTIFICATION PUTER
+   ============================================================
+   Le popup de connexion Puter DOIT être ouvert directement depuis
+   un clic utilisateur (sinon les navigateurs bloquent la fenêtre,
+   ou elle reste bloquée sur un écran gris). On ne laisse donc
+   jamais txt2img() déclencher elle-même le popup : on vérifie
+   isSignedIn() en amont, et si besoin on affiche un bouton dédié
+   "Se connecter à Puter" que l'utilisateur doit cliquer lui-même. */
+
+let simAuthChecked = false;
+
+function simIsPuterAvailable(){
+  return !!(window.puter && window.puter.auth && window.puter.ai && window.puter.ai.txt2img);
+}
+
+/* Met à jour le bandeau d'état de connexion + le bouton "Générer" en conséquence */
+function simRefreshAuthUI(){
+  const banner = document.getElementById("simAuthBanner");
+  const bannerText = document.getElementById("simAuthBannerText");
+  const signInBtn = document.getElementById("simAuthSignInBtn");
+  const generateBtn = document.getElementById("simGenerateBtn");
+
+  if(!simIsPuterAvailable()){
+    banner.className = "sim-auth-banner signed-out";
+    bannerText.textContent = "Puter.js n'a pas pu se charger (vérifie ta connexion Internet).";
+    signInBtn.style.display = "none";
+    generateBtn.disabled = true;
+    return;
+  }
+
+  const signedIn = puter.auth.isSignedIn();
+  simAuthChecked = true;
+
+  if(signedIn){
+    banner.className = "sim-auth-banner signed-in";
+    bannerText.textContent = "Connecté à Puter — prêt à générer des rendus.";
+    signInBtn.style.display = "none";
+    generateBtn.disabled = false;
+  }else{
+    banner.className = "sim-auth-banner signed-out";
+    bannerText.textContent = "Connecte-toi à Puter pour générer des rendus (gratuit, 1 clic).";
+    signInBtn.style.display = "inline-block";
+    signInBtn.disabled = false;
+    signInBtn.textContent = "Se connecter à Puter";
+    generateBtn.disabled = true;
+  }
+}
+
+/* Déclenché UNIQUEMENT par le clic sur le bouton dédié : c'est ce qui garantit
+   que le popup Puter s'ouvre correctement (fenêtre non bloquée, pas d'écran gris). */
+async function simHandleSignInClick(){
+  const signInBtn = document.getElementById("simAuthSignInBtn");
+  const bannerText = document.getElementById("simAuthBannerText");
+
+  if(!simIsPuterAvailable()){
+    alert("Le module Puter.js n'a pas pu se charger. Vérifie ta connexion Internet puis recharge la page.");
+    return;
+  }
+
+  signInBtn.disabled = true;
+  signInBtn.textContent = "Connexion en cours…";
+  bannerText.textContent = "Une fenêtre de connexion Puter va s'ouvrir…";
+
+  try{
+    // Important : cet appel doit rester dans le handler du clic (pas de await
+    // avant lui) pour que le navigateur autorise l'ouverture du popup.
+    await puter.auth.signIn();
+    showToast("Connecté à Puter");
+  }catch(err){
+    console.error(err);
+    showToast("Connexion Puter annulée ou impossible");
+  }finally{
+    simRefreshAuthUI();
+  }
+}
+
 /* ---------- Appel de l'IA via Puter.js (gratuit) ---------- */
 async function simGenerateRender(){
   if(!simUploadedImage){
@@ -2050,8 +2178,17 @@ async function simGenerateRender(){
 
   const customText = document.getElementById("simCustomText").value;
 
-  if(!window.puter || !window.puter.ai || !window.puter.ai.txt2img){
+  if(!simIsPuterAvailable()){
     alert("Le module Puter.js n'a pas pu se charger (vérifiez votre connexion Internet) — le simulateur ne peut pas fonctionner sans lui.");
+    return;
+  }
+
+  // On vérifie l'authentification AVANT d'appeler txt2img(), pour ne jamais
+  // laisser l'API déclencher elle-même un popup de connexion (c'est ce popup
+  // "automatique" qui reste bloqué sur un écran gris dans certains contextes).
+  if(!puter.auth.isSignedIn()){
+    simRefreshAuthUI();
+    showToast("Connecte-toi à Puter (bouton ci-dessus) avant de générer un rendu");
     return;
   }
 
@@ -2072,7 +2209,14 @@ async function simGenerateRender(){
 
   }catch(err){
     console.error(err);
-    alert("Une erreur est survenue lors de la génération du rendu :\n" + (err?.message || err));
+    // Si l'erreur vient d'une session expirée entre-temps, on remet le
+    // bandeau de connexion à jour plutôt que de laisser l'utilisateur bloqué.
+    if(window.puter && window.puter.auth && !puter.auth.isSignedIn()){
+      simRefreshAuthUI();
+      showToast("Ta session Puter a expiré, reconnecte-toi puis réessaie");
+    }else{
+      alert("Une erreur est survenue lors de la génération du rendu :\n" + (err?.message || err));
+    }
   }finally{
     simSetLoading(false);
   }
@@ -2082,6 +2226,7 @@ async function simGenerateRender(){
 function openSimulator(){
   document.getElementById("simulatorOverlay").classList.add("show");
   closeSidebar();
+  simRefreshAuthUI();
 }
 function closeSimulator(){
   document.getElementById("simulatorOverlay").classList.remove("show");
@@ -3300,6 +3445,7 @@ document.getElementById("simProductSelect").addEventListener("change", (e) => {
 document.getElementById("simModelSelect").addEventListener("change", simUpdateModelDesc);
 
 document.getElementById("simGenerateBtn").addEventListener("click", simGenerateRender);
+document.getElementById("simAuthSignInBtn").addEventListener("click", simHandleSignInClick);
 document.getElementById("simRestartBtn").addEventListener("click", simReset);
 
 document.getElementById("baRange").addEventListener("input", (e) => {
@@ -3455,6 +3601,17 @@ renderSidebar();
 renderHome();
 initFirebase();
 simPopulateProductSelect();
+
+/* Le script Puter.js peut mettre un instant à s'initialiser : on retente
+   quelques fois la vérification pour ne pas laisser le bandeau bloqué
+   sur "Vérification…" si l'utilisateur ouvre le simulateur très vite. */
+(function waitForPuterThenRefresh(attempts){
+  if(simIsPuterAvailable() || attempts <= 0){
+    simRefreshAuthUI();
+    return;
+  }
+  setTimeout(() => waitForPuterThenRefresh(attempts - 1), 400);
+})(10);
 
 </script>
 
