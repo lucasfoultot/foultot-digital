@@ -1775,8 +1775,18 @@ display:block;
 <div class="sim-model-desc" id="simModelDesc"></div>
 </div>
 
+<div class="sim-step" id="simColorStep" style="display:none">
+<div class="sim-step-label"><span class="sim-num">4</span> Couleur (nuancier CETAL)</div>
+<select class="sim-select" id="simColorSelect"></select>
+</div>
+
+<div class="sim-step" id="simDecorStep" style="display:none">
+<div class="sim-step-label"><span class="sim-num">5</span> Décor / motif du modèle</div>
+<select class="sim-select" id="simDecorSelect"></select>
+</div>
+
 <div class="sim-step">
-<div class="sim-step-label"><span class="sim-num">4</span> Personnalisation (facultatif)</div>
+<div class="sim-step-label"><span class="sim-num">6</span> Personnalisation (facultatif)</div>
 <textarea class="sim-textarea" id="simCustomText" placeholder="Ex : teinte gris anthracite RAL 7016, vitrage dépoli vertical, poignée bâton de tirage en inox…"></textarea>
 </div>
 
@@ -1902,6 +1912,78 @@ const SIM_PRODUCTS = categories.filter(c => !c.standalone);
    description technique reprise (librement) du catalogue officiel.
    Cette liste est volontairement éditable : Lucas peut compléter
    ou corriger chaque fiche sans toucher au reste du code. */
+/* ---------- CATALOGUE OFFICIEL CETAL "ÉVOLUTION 2025" — PORTAILS ----------
+   Base de données fidèle au catalogue fabricant (juillet 2026).
+   Nuancier standard (24 teintes) + 4 teintes ton bois + option "autre teinte
+   Qualicoat classe 2 sur demande". */
+const CETAL_COLORS = [
+  {code:"1015", finish:"ST", name:"Ivoire"},
+  {code:"Yazd", finish:"Sablé", name:"Sable", nouveau:true},
+  {code:"3012", finish:"ST", name:"Rouge Beige", nouveau:true},
+  {code:"Ambre", finish:"Sablé", name:"Doré"},
+  {code:"Mars", finish:"Sablé", name:"Rouille"},
+  {code:"5014", finish:"ST", name:"Bleu Pigeon"},
+  {code:"5003", finish:"ST", name:"Bleu Saphir", nouveau:true},
+  {code:"5020", finish:"ST", name:"Bleu Océan", nouveau:true},
+  {code:"7006", finish:"ST", name:"Gris Beige"},
+  {code:"7039", finish:"ST", name:"Gris Quartz", nouveau:true},
+  {code:"8014", finish:"ST", name:"Brun Sépia", nouveau:true},
+  {code:"8019", finish:"ST", name:"Brun Gris", nouveau:true},
+  {code:"6021", finish:"ST", name:"Vert Pâle"},
+  {code:"Changi", finish:"Sablé", name:"Gris Vert", nouveau:true},
+  {code:"6005", finish:"ST", name:"Vert Mousse"},
+  {code:"6009", finish:"ST", name:"Vert Sapin"},
+  {code:"9010", finish:"ST", name:"Blanc"},
+  {code:"7035", finish:"ST", name:"Gris Clair", nouveau:true},
+  {code:"9006", finish:"ST", name:"Aluminium Blanc"},
+  {code:"9007", finish:"ST", name:"Aluminium Gris"},
+  {code:"3004", finish:"ST", name:"Rouge Pourpre"},
+  {code:"Noir 2100", finish:"Sablé", name:"Noir", nouveau:true},
+  {code:"7016", finish:"ST", name:"Gris Anthracite"},
+  {code:"9005", finish:"ST", name:"Noir Profond"}
+];
+const CETAL_TEINTES_BOIS = [
+  "Chêne doré", "Chêne foncé", "Frêne clair (nouveau)", "Frêne grisé (nouveau)"
+];
+
+// 12 remplissages tôle 4 mm à motif du modèle PLANÉTAIRE
+const CETAL_PLANETAIRE_MOTIFS = ["Altitude","Botanik","Coquillage","Cotillon","Éclat","Électro","Faisceau","Flower","Industriel","Mikado","Opéra","Perséides"];
+
+// Décors de bandeau du modèle MÉGA
+const CETAL_MEGA_BANDEAU_DECORS = ["Altitude","Bambou","Boîte à musique","Brisur","Broderie","Cotillon","Cubinéo","Éclat","Faisceau","Flower","Folia","Ginkgo","Lierre","Losangerie","Maya","Mikado","Monstera","Opéra","Perforée","Perséïdes","Persienne 45°","Persienne horizontale","Persienne verticale","Pétillant","Plein lisse","Rotin","Stria","Tréflor"];
+
+// 20 tôles décoratives 4 mm du modèle HERCULE
+const CETAL_HERCULE_TOLES = ["Bambou","Boîte à musique","Broderie","Éclat","Effervescence","Folia","Herbe","Industriel","Losangerie","Luna","Maya","Mikado","Monstera","Perforée","Persienne 45°","Persienne horizontale","Persienne verticale","Pétillant","Rotin","Stria"];
+
+// Embouts de finition (gamme Rétro : Pléïade, Capella, Vénus) — bronze antique ou teinte au choix
+const CETAL_EMBOUTS_RETRO = ["Fleur de lys","Flèche","Pointe de diamant","Boule"];
+
+/* Modèles de PORTAILS du catalogue CETAL "Évolution 2025", tels que
+   nommés et décrits par le fabricant (styles Inspiration, Intemporel,
+   Tendance, Création, Rétro). `decors`, quand présent, liste les
+   motifs / tôles / embouts propres au modèle, sélectionnables dans
+   le configurateur. */
+const CETAL_PORTAIL_MODELS = [
+  {name:"Cetal Pulsar", style:"Inspiration / Intemporel", desc:"30 variantes : alternance de planches verticales de 70 ou 120×20 mm et/ou barreaux de 25×20 mm, en applique, à hauteurs variables. Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Planétaire", style:"Inspiration", desc:"12 remplissages en tôle de 4 mm sans traverse haute, à motif thématique. Disponible en 2 ou 3 traverses basses.", decors: CETAL_PLANETAIRE_MOTIFS},
+  {name:"Cetal Méga", style:"Inspiration", desc:"4 variantes, grandes traverses horizontales de 225×50 mm, jointives, ajourées ou avec bandeau décoratif (hauteur de bandeau de 112,5 à 337,5 mm).", decors: CETAL_MEGA_BANDEAU_DECORS},
+  {name:"Cetal Pluton", style:"Inspiration", desc:"5 dispositions de cassettes (Pluton 1 à 5), 15 déclinaisons possibles, remplissage plein uniquement. Options : angles chanfreinés, fond noir 2100, relief (cassette 20 mm au lieu de 15 mm). Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Jupiter", style:"Intemporel / Tendance", desc:"16 variantes, barreaux de 25×20 mm, pose verticale à espacement régulier (style Intemporel) ou horizontale/irrégulière (style Tendance), option liseré. Disponible en 1, 2, 3 traverses basses ou panneau de soubassement ajustable."},
+  {name:"Cetal Lyra", style:"Intemporel / Tendance", desc:"12 variantes, barreaux de 25×20 mm avec embouts de finition aluminium assortis à la couleur, en applique, pose régulière (Intemporel) ou en quinconce/biais (Tendance). Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Pégase", style:"Intemporel / Tendance", desc:"32 variantes, planches de 70 ou 120×20 mm, pose verticale ou horizontale, espaces réguliers (Intemporel) ou irréguliers (Tendance). Disponible en 1, 2, 3 traverses basses ou panneau de soubassement ajustable."},
+  {name:"Cetal Naïade", style:"Intemporel / Tendance", desc:"18 variantes, planches de 70 ou 120 mm, pose classique ou en quinconce, hauteurs régulières ou irrégulières (Tendance). Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Saturne", style:"Intemporel / Tendance", desc:"56 variantes combinant barreaux de 25 mm et planches de 70/120×20 mm, à l'horizontale ou à la verticale, espacements réguliers ou irréguliers. Disponible en 1, 2, 3 traverses basses ou panneau de soubassement ajustable."},
+  {name:"Cetal Varuna", style:"Intemporel / Tendance", desc:"18 configurations, remplissage à lames en S brise-vent de 140 mm, horizontale ou verticale, plein ou ajouré (régulier ou progressif). Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Mercure", style:"Intemporel / Tendance", desc:"30 variantes, frises entièrement occultantes de 100 ou 200 mm (ou combinées), pose verticale, horizontale ou diagonale. Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Métis", style:"Intemporel", desc:"6 variantes, motif tressé ou nid d'abeille, système de remplissage breveté créant un jeu d'ombres et de lumières. Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Titan", style:"Tendance", desc:"9 variantes, panneaux de 20 mm lisses ou à nervures intérieures/extérieures, horizontales ou verticales, personnalisables (graphismes, découpes, insertions de panneaux ou de verre acrylique). Disponible en 1, 2 ou 3 traverses basses."},
+  {name:"Cetal Hercule", style:"Tendance", desc:"3 variantes de base, déclinables en 20 tôles décoratives de 4 mm (découpe, rainurage, emboutissage). Disponible en 1, 2 ou 3 traverses basses.", decors: CETAL_HERCULE_TOLES},
+  {name:"Cetal Pléïade", style:"Rétro", desc:"5 variantes, barreaux carrés moulurés de 20×20 mm avec doucines, embouts de finition en bronze antique ou teinte au choix. Options : volutes, rosaces, découpes, cintrage. Disponible en 1, 2, 3 traverses basses ou panneau de soubassement ajustable.", decors: CETAL_EMBOUTS_RETRO},
+  {name:"Cetal Capella", style:"Rétro", desc:"4 variantes de base, remplissage alterné de profils festonnés de 100×20 mm et de barreaux carrés moulurés de 20×20 mm avec doucines, mêmes embouts et options que Pléïade. Disponible en 1, 2, 3 traverses basses ou panneau de soubassement ajustable.", decors: CETAL_EMBOUTS_RETRO},
+  {name:"Cetal Vénus", style:"Rétro", desc:"4 variantes, profils festonnés de 100×20 mm et barreaux carrés moulurés de 20×20 mm insérés dans une traverse haute de 80 mm (droite ou en forme), mêmes embouts et options que Pléïade. Disponible en 1, 2, 3 traverses basses ou panneau de soubassement ajustable.", decors: CETAL_EMBOUTS_RETRO},
+  {name:"Cetal Création (sur-mesure)", style:"Création", desc:"Portail 100% personnalisable : structure (1, 2 ou 3 traverses), forme (droit, biais bas/haut, concave, convexe), remplissage ajouré (barreaux 20/25, planches 70/120, lame S, mixtes) ou plein (panneaux lisses/nervurés, frises, tresse, tôles 4 mm à motif), bandeaux et décors ronds/triangles, ou reproduction sur-mesure d'une porte d'entrée/garage/garde-corps existant, ou découpe sur-mesure (logo, initiales, motif personnalisé)."}
+];
+
 const REAL_MODELS = {
   "fenetres": [
     {name:"Finstral FIN-Project 78", desc:"Fenêtre PVC 4 chambres, triple vitrage, profil 78 mm, ferrage caché."},
@@ -1932,11 +2014,7 @@ const REAL_MODELS = {
     {name:"Brustor B120", desc:"Store banne monobloc, coffre intégral, toile rétractable, bras articulés."},
     {name:"Brustor B150", desc:"Store banne à coffre semi-intégral, grande largeur, motorisation filaire ou radio."}
   ],
-  "portails-clotures": [
-    {name:"Cetal Portail Battant Alu", desc:"Portail battant aluminium, remplissage lames pleines ou ajourées, motorisable."},
-    {name:"Cetal Portail Coulissant Alu", desc:"Portail coulissant aluminium autoportant, idéal grande largeur."},
-    {name:"Cetal Clôture Claustra", desc:"Clôture aluminium à lames horizontales type claustra, occultation partielle."}
-  ],
+  "portails-clotures": CETAL_PORTAIL_MODELS,
   "volets-roulants": [
     {name:"Roma Rénovation", desc:"Volet roulant en pose applique/rénovation, lames aluminium, coffre compact."},
     {name:"Roma Coffre Intégré", desc:"Volet roulant à coffre intégré à la construction, isolation thermique renforcée."}
@@ -1997,6 +2075,81 @@ function simPopulateModelSelect(categoryKey){
     modelSelect.appendChild(opt);
   });
   simUpdateModelDesc();
+  simUpdateColorStep(categoryKey);
+}
+
+/* ---------- Étape couleur (nuancier CETAL) : uniquement pour les portails ---------- */
+function simUpdateColorStep(categoryKey){
+  const colorStep = document.getElementById("simColorStep");
+  const colorSelect = document.getElementById("simColorSelect");
+
+  if(categoryKey !== "portails-clotures"){
+    colorStep.style.display = "none";
+    return;
+  }
+
+  colorStep.style.display = "block";
+  colorSelect.innerHTML = "";
+
+  const optNone = document.createElement("option");
+  optNone.value = "";
+  optNone.textContent = "— Non précisé —";
+  colorSelect.appendChild(optNone);
+
+  CETAL_COLORS.forEach((c) => {
+    const opt = document.createElement("option");
+    const label = `${c.name} (${c.finish} - ${c.code})${c.nouveau ? " [Nouveau]" : ""}`;
+    opt.value = label;
+    opt.textContent = label;
+    colorSelect.appendChild(opt);
+  });
+
+  const boisGroup = document.createElement("optgroup");
+  boisGroup.label = "Teintes ton bois";
+  CETAL_TEINTES_BOIS.forEach((b) => {
+    const opt = document.createElement("option");
+    opt.value = b;
+    opt.textContent = b;
+    boisGroup.appendChild(opt);
+  });
+  colorSelect.appendChild(boisGroup);
+}
+
+/* ---------- Étape décor / motif : uniquement si le modèle choisi en propose ---------- */
+function simUpdateDecorStep(){
+  const categoryKey = document.getElementById("simProductSelect").value;
+  const decorStep = document.getElementById("simDecorStep");
+  const decorSelect = document.getElementById("simDecorSelect");
+
+  if(categoryKey !== "portails-clotures"){
+    decorStep.style.display = "none";
+    return;
+  }
+
+  const modelSelect = document.getElementById("simModelSelect");
+  const models = REAL_MODELS[categoryKey] || [];
+  const chosen = models.find(m => m.name === modelSelect.value);
+
+  if(!chosen || !chosen.decors || chosen.decors.length === 0){
+    decorStep.style.display = "none";
+    decorSelect.innerHTML = "";
+    return;
+  }
+
+  decorStep.style.display = "block";
+  decorSelect.innerHTML = "";
+
+  const optNone = document.createElement("option");
+  optNone.value = "";
+  optNone.textContent = "— Non précisé —";
+  decorSelect.appendChild(optNone);
+
+  chosen.decors.forEach((d) => {
+    const opt = document.createElement("option");
+    opt.value = d;
+    opt.textContent = d;
+    decorSelect.appendChild(opt);
+  });
 }
 
 /* ---------- Mise à jour de la description technique sous le select modèle ---------- */
@@ -2006,6 +2159,7 @@ function simUpdateModelDesc(){
   const models = REAL_MODELS[categoryKey] || [];
   const chosen = models.find(m => m.name === modelSelect.value);
   document.getElementById("simModelDesc").textContent = chosen ? chosen.desc : "";
+  simUpdateDecorStep();
 }
 
 /* ---------- Conversion du fichier photo en Base64 ---------- */
@@ -2026,11 +2180,19 @@ function simFileToBase64(file){
    Combine : le produit générique, le modèle réel choisi (avec sa
    fiche technique officielle) et les souhaits personnalisés rédigés
    librement par l'utilisateur. */
-function simBuildPrompt(productName, realModel, customText){
+function simBuildPrompt(productName, realModel, customText, colorChoice, decorChoice){
   const modelBlock = realModel
     ? `MODÈLE RÉEL À INCRUSTER : "${realModel.name}"
 Caractéristiques officielles du catalogue fabricant à respecter fidèlement (forme, proportions, lignes, matière) : ${realModel.desc}`
     : `PRODUIT À INCRUSTER : "${productName}"`;
+
+  const colorBlock = colorChoice && colorChoice.trim().length > 0
+    ? `COULEUR / TEINTE À RESPECTER STRICTEMENT (nuancier CETAL) : ${colorChoice.trim()}`
+    : "";
+
+  const decorBlock = decorChoice && decorChoice.trim().length > 0
+    ? `DÉCOR / MOTIF DU MODÈLE À RESPECTER STRICTEMENT : ${decorChoice.trim()}`
+    : "";
 
   const customBlock = customText && customText.trim().length > 0
     ? `PERSONNALISATION DEMANDÉE PAR LE CLIENT (à respecter en priorité pour la teinte, les finitions, la quincaillerie, le type de vitrage, etc.) : ${customText.trim()}`
@@ -2040,6 +2202,8 @@ Caractéristiques officielles du catalogue fabricant à respecter fidèlement (f
 À partir de la photo fournie, génère une nouvelle version photoréaliste de cette EXACTE façade, en remplaçant uniquement l'élément concerné ("${productName}") par le modèle réel décrit ci-dessous.
 
 ${modelBlock}
+${colorBlock}
+${decorBlock}
 ${customBlock}
 
 Contraintes impératives :
@@ -2177,6 +2341,8 @@ async function simGenerateRender(){
   const realModel = models.find(m => m.name === modelSelect.value) || null;
 
   const customText = document.getElementById("simCustomText").value;
+  const colorChoice = document.getElementById("simColorSelect") ? document.getElementById("simColorSelect").value : "";
+  const decorChoice = document.getElementById("simDecorSelect") ? document.getElementById("simDecorSelect").value : "";
 
   if(!simIsPuterAvailable()){
     alert("Le module Puter.js n'a pas pu se charger (vérifiez votre connexion Internet) — le simulateur ne peut pas fonctionner sans lui.");
@@ -2195,7 +2361,7 @@ async function simGenerateRender(){
   simSetLoading(true);
 
   try{
-    const prompt = simBuildPrompt(product.name, realModel, customText);
+    const prompt = simBuildPrompt(product.name, realModel, customText, colorChoice, decorChoice);
 
     // puter.ai.txt2img() renvoie directement un élément <img> déjà chargé.
     const resultImgEl = await puter.ai.txt2img(prompt, {
@@ -2241,6 +2407,10 @@ function simReset(){
   document.getElementById("simUploadHint").style.display = "flex";
   document.getElementById("simRetakeBtn").style.display = "none";
   document.getElementById("simCustomText").value = "";
+  const colorSelectReset = document.getElementById("simColorSelect");
+  if(colorSelectReset) colorSelectReset.selectedIndex = 0;
+  const decorSelectReset = document.getElementById("simDecorSelect");
+  if(decorSelectReset) decorSelectReset.selectedIndex = 0;
   document.getElementById("simPlaceholder").style.display = "block";
   document.getElementById("baCompare").classList.remove("show");
   document.getElementById("baRange").style.display = "none";
