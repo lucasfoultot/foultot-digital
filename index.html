@@ -24,6 +24,12 @@
 --text:#202124;
 --text-secondary:#5f6368;
 --radius:8px;
+--gold:#b8925a;
+--gold-soft:#f4ede2;
+--retro-accent:#b8925a;
+--moderne-accent:#062b55;
+--intemporel-accent:#3f7d5c;
+--pd-radius:10px;
 }
 
 *{
@@ -1611,6 +1617,93 @@ display:none;
 display:block;
 }
 
+/* ============================================================
+   CONCEPTEUR IA — PORTAILS (fusion configurateur + simulateur)
+   Étapes Thème -> Modèle -> Finition, intégrées dans la colonne
+   gauche (340px) du simulateur, en remplacement des <select>
+   simples lorsque le produit "Portails & clôtures" est choisi.
+   ============================================================ */
+
+.pd-wrap{margin-bottom:4px;}
+
+.pd-stepper{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:16px;}
+.pd-step-node{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;position:relative;}
+.pd-step-circle{width:26px;height:26px;border-radius:50%;background:white;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-secondary);transition:all .2s ease;z-index:2;}
+.pd-step-node.active .pd-step-circle{border-color:var(--navy);color:var(--navy);background:var(--navy-soft);}
+.pd-step-node.done .pd-step-circle{border-color:var(--navy);background:var(--navy);color:white;}
+.pd-step-label{font-size:9.5px;color:var(--text-secondary);font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.3px;}
+.pd-step-node.active .pd-step-label{color:var(--navy);}
+.pd-step-line{position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--border);z-index:1;}
+.pd-step-node:first-child .pd-step-line{display:none;}
+.pd-step-node.done .pd-step-line, .pd-step-node.active .pd-step-line{background:var(--navy);}
+
+.pd-panel{display:none;}
+.pd-panel.active{display:block;animation:pdFade .2s ease;}
+@keyframes pdFade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+.pd-panel-title{font-size:12.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;}
+
+.pd-back-btn{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--navy);background:none;border:none;cursor:pointer;margin-bottom:10px;padding:2px;}
+.pd-back-btn:hover{text-decoration:underline;}
+
+/* Thèmes : cartes empilées (colonne étroite) */
+.pd-themes{display:flex;flex-direction:column;gap:10px;}
+.pd-theme-card{display:flex;align-items:center;gap:10px;background:white;border:1px solid var(--border);border-radius:var(--pd-radius);padding:10px 12px;cursor:pointer;transition:box-shadow .15s ease, border-color .15s ease;text-align:left;}
+.pd-theme-card:hover{box-shadow:0 6px 14px rgba(6,43,85,.12);border-color:var(--navy-light);}
+.pd-theme-visual{width:40px;height:40px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pd-theme-visual svg{width:24px;height:24px;}
+.pd-theme-body h4{font-size:13px;font-weight:700;color:var(--text);}
+.pd-theme-body p{font-size:10.5px;color:var(--text-secondary);line-height:1.35;margin-top:2px;}
+.pd-theme-card[data-theme="retro"] .pd-theme-visual{background:linear-gradient(135deg,#f4ede2,#e7d4b8);}
+.pd-theme-card[data-theme="moderne"] .pd-theme-visual{background:linear-gradient(135deg,#eaf0f8,#c7d7ea);}
+.pd-theme-card[data-theme="intemporel"] .pd-theme-visual{background:linear-gradient(135deg,#eaf3ee,#c9ded1);}
+
+/* Modèles : cartes empilées */
+.pd-models{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;}
+.pd-model-card{background:white;border:1px solid var(--border);border-radius:var(--pd-radius);padding:10px 12px;cursor:pointer;transition:box-shadow .15s ease, border-color .15s ease;}
+.pd-model-card:hover{box-shadow:0 6px 14px rgba(6,43,85,.10);border-color:var(--navy-light);}
+.pd-model-card.selected{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy) inset;}
+.pd-model-card h5{font-size:12.5px;font-weight:700;color:var(--navy);}
+.pd-model-card .pd-model-desc{font-size:10.5px;color:var(--text-secondary);margin-top:3px;line-height:1.4;}
+.pd-model-specs{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;}
+.pd-tag{font-size:9px;font-weight:600;background:var(--bg);border:1px solid var(--border);color:var(--text-secondary);padding:2px 6px;border-radius:20px;}
+
+/* Finition : récap + nuancier */
+.pd-model-recap{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:var(--pd-radius);padding:10px 12px;margin-bottom:14px;}
+.pd-model-recap .pd-mini-icon{width:36px;height:36px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pd-model-recap .pd-mini-icon svg{width:20px;height:20px;}
+.pd-model-recap-text h5{font-size:12px;color:var(--navy);font-weight:700;}
+.pd-model-recap-text span{font-size:10px;color:var(--text-secondary);}
+
+.pd-color-section-label{font-size:10.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.3px;margin:14px 0 8px;}
+.pd-colors{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.pd-color-swatch{cursor:pointer;text-align:center;}
+.pd-color-circle{width:26px;height:26px;border-radius:50%;margin:0 auto 4px;border:2px solid rgba(0,0,0,0.06);transition:transform .12s ease;}
+.pd-color-swatch:hover .pd-color-circle{transform:scale(1.1);}
+.pd-color-swatch.selected .pd-color-circle{box-shadow:0 0 0 2px white, 0 0 0 4px var(--navy);}
+.pd-color-name{font-size:7.5px;color:var(--text-secondary);line-height:1.15;display:block;}
+
+.pd-wood-colors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pd-wood-swatch{cursor:pointer;text-align:center;}
+.pd-wood-rect{width:100%;height:24px;border-radius:5px;margin-bottom:4px;border:2px solid rgba(0,0,0,0.06);transition:transform .12s ease;}
+.pd-wood-swatch:hover .pd-wood-rect{transform:scale(1.04);}
+.pd-wood-swatch.selected .pd-wood-rect{box-shadow:0 0 0 2px white, 0 0 0 4px var(--navy);}
+.pd-plusvalue{font-size:8px;color:var(--gold);font-weight:700;display:block;}
+
+/* Récapitulatif final du design (remplace le bouton "Valider ma sélection" de l'ancien configurateur) */
+.pd-summary{margin-top:14px;background:var(--navy);border-radius:var(--pd-radius);padding:12px 14px;color:white;}
+.pd-summary-line{font-size:11.5px;opacity:.92;line-height:1.6;}
+.pd-summary-line b{opacity:1;}
+.pd-summary-edit{margin-top:8px;background:rgba(255,255,255,.14);color:white;border:none;padding:7px 12px;border-radius:7px;font-weight:700;font-size:11px;cursor:pointer;}
+.pd-summary-edit:hover{background:rgba(255,255,255,.24);}
+
+/* Bandeau de synthèse affiché une fois le design validé (steps photo + génération restent visibles en dessous) */
+.pd-locked-summary{background:var(--gold-soft);border:1px solid #e9d6b8;border-radius:var(--pd-radius);padding:10px 12px;margin-bottom:14px;}
+.pd-locked-summary .pd-locked-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
+.pd-locked-summary .pd-locked-line{font-size:11.5px;color:var(--text);line-height:1.5;}
+.pd-locked-summary button{margin-top:6px;background:none;border:none;color:var(--navy);font-weight:700;font-size:11px;cursor:pointer;padding:0;}
+.pd-locked-summary button:hover{text-decoration:underline;}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <script src="https://js.puter.com/v2/"></script>
@@ -1735,7 +1828,7 @@ display:block;
 <div class="simulator-topbar">
 <div>
 <h2>Simulateur de façade IA</h2>
-<span>Visualisez le produit sur la façade du client, en quelques secondes</span>
+<span>Concevez le portail (thème, modèle, finition) puis visualisez-le sur la façade du client en quelques secondes</span>
 </div>
 <button class="simulator-close" id="simulatorClose">&times;</button>
 </div>
@@ -1769,6 +1862,7 @@ display:block;
 <select class="sim-select" id="simProductSelect"></select>
 </div>
 
+<div id="simStandardFields">
 <div class="sim-step" id="simModelStep">
 <div class="sim-step-label"><span class="sim-num">3</span> Modèle réel du catalogue</div>
 <select class="sim-select" id="simModelSelect"></select>
@@ -1783,6 +1877,69 @@ display:block;
 <div class="sim-step" id="simDecorStep" style="display:none">
 <div class="sim-step-label"><span class="sim-num">5</span> Décor / motif du modèle</div>
 <select class="sim-select" id="simDecorSelect"></select>
+</div>
+</div>
+
+<!-- ================= CONCEPTEUR IA — PORTAILS ==================
+     Remplace les <select> ci-dessus quand le produit choisi est
+     "Portails & clôtures" : conception guidée (Thème -> Modèle ->
+     Finition), dont le résultat alimente directement le moteur de
+     génération d'image IA ci-dessous (mêmes étapes Photo + Génération). -->
+<div class="pd-wrap sim-step" id="simPortailDesigner" style="display:none">
+<div class="sim-step-label"><span class="sim-num">3</span> Concevoir le portail</div>
+
+<div class="pd-stepper" id="pdStepper">
+  <div class="pd-step-node active" data-step="1">
+    <div class="pd-step-line"></div>
+    <div class="pd-step-circle">1</div>
+    <div class="pd-step-label">Thème</div>
+  </div>
+  <div class="pd-step-node" data-step="2">
+    <div class="pd-step-line"></div>
+    <div class="pd-step-circle">2</div>
+    <div class="pd-step-label">Modèle</div>
+  </div>
+  <div class="pd-step-node" data-step="3">
+    <div class="pd-step-line"></div>
+    <div class="pd-step-circle">3</div>
+    <div class="pd-step-label">Finition</div>
+  </div>
+</div>
+
+<!-- STEP 1 : THEME -->
+<div class="pd-panel active" id="pdPanel1">
+  <div class="pd-themes" id="pdThemeGrid"></div>
+</div>
+
+<!-- STEP 2 : MODELE -->
+<div class="pd-panel" id="pdPanel2">
+  <button class="pd-back-btn" id="pdBackToStep1">&larr; Changer de thème</button>
+  <div class="pd-models" id="pdModelGrid"></div>
+</div>
+
+<!-- STEP 3 : FINITION -->
+<div class="pd-panel" id="pdPanel3">
+  <button class="pd-back-btn" id="pdBackToStep2">&larr; Changer de modèle</button>
+  <div class="pd-model-recap" id="pdModelRecap"></div>
+
+  <div class="pd-color-section-label">Teintes standard</div>
+  <div class="pd-colors" id="pdColorGrid"></div>
+
+  <div class="pd-color-section-label">Teintes ton bois <span class="pd-plusvalue" style="display:inline">(plus-value)</span></div>
+  <div class="pd-wood-colors" id="pdWoodGrid"></div>
+
+  <div class="pd-summary" id="pdSummary" style="display:none">
+    <div class="pd-summary-line" id="pdSummaryLine"></div>
+    <button class="pd-summary-edit" id="pdConfirmBtn">✓ Valider ce design</button>
+  </div>
+</div>
+
+<!-- Récapitulatif verrouillé, affiché une fois le design validé -->
+<div class="pd-locked-summary" id="pdLockedSummary" style="display:none">
+  <div class="pd-locked-title">Design retenu</div>
+  <div class="pd-locked-line" id="pdLockedLine"></div>
+  <button id="pdEditBtn">Modifier le design</button>
+</div>
 </div>
 
 <div class="sim-step">
@@ -2001,6 +2158,222 @@ const CETAL_PORTAIL_MODELS = [
   {name:"Cetal Création (sur-mesure)", style:"Création", desc:"Portail 100% personnalisable : structure (1, 2 ou 3 traverses), forme (droit, biais bas/haut, concave, convexe), remplissage ajouré (barreaux 20/25, planches 70/120, lame S, mixtes) ou plein (panneaux lisses/nervurés, frises, tresse, tôles 4 mm à motif), bandeaux et décors ronds/triangles, ou reproduction sur-mesure d'une porte d'entrée/garage/garde-corps existant, ou découpe sur-mesure (logo, initiales, motif personnalisé)."}
 ];
 
+/* ============================================================
+   CONCEPTEUR IA — PORTAILS
+   Regroupe CETAL_PORTAIL_MODELS (défini ci-dessus, source unique
+   de vérité pour les fiches produit) par univers Thème (Rétro /
+   Moderne / Intemporel) pour offrir un parcours de conception
+   guidé, dont le résultat (thème + modèle + finition) alimente
+   ensuite directement simBuildPrompt() / simGenerateRender().
+   ============================================================ */
+
+const PD_GATE_ICON = {
+  retro: `<svg viewBox="0 0 64 64" fill="none"><path d="M8 54V16l8-6 8 6v38M32 54V16l8-6 8 6v38" stroke="#b8925a" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="26" r="2" fill="#b8925a"/><circle cx="40" cy="26" r="2" fill="#b8925a"/><path d="M8 44h48M8 34h48" stroke="#b8925a" stroke-width="1.6" opacity=".55"/></svg>`,
+  moderne: `<svg viewBox="0 0 64 64" fill="none"><rect x="8" y="18" width="48" height="34" rx="1" stroke="#062b55" stroke-width="2.2"/><path d="M8 30h48M8 42h48" stroke="#062b55" stroke-width="2.2"/></svg>`,
+  intemporel: `<svg viewBox="0 0 64 64" fill="none"><path d="M12 52V14M20 52V14M28 52V14M36 52V14M44 52V14M52 52V14" stroke="#3f7d5c" stroke-width="2" stroke-linecap="round"/><path d="M8 24h48" stroke="#3f7d5c" stroke-width="2.2"/></svg>`
+};
+
+const PD_THEMES = {
+  retro: {
+    label:"Rétro",
+    tagline:"Barreaudage mouluré et embouts de finition, l'esprit du portail traditionnel.",
+    models: CETAL_PORTAIL_MODELS.filter(m => m.style.includes("Rétro"))
+  },
+  moderne: {
+    label:"Moderne",
+    tagline:"Lignes franches, remplissages contemporains en tôle, traverses ou planches.",
+    models: CETAL_PORTAIL_MODELS.filter(m => m.style.includes("Tendance") || m.style.includes("Inspiration") || m.style.includes("Création"))
+  },
+  intemporel: {
+    label:"Intemporel",
+    tagline:"Matières nobles et remplissages sobres, pour une façade qui ne se démode pas.",
+    models: CETAL_PORTAIL_MODELS.filter(m => m.style.includes("Intemporel"))
+  }
+};
+
+/* Nuancier CETAL avec aperçu couleur (hex), pour l'affichage visuel des
+   pastilles dans le configurateur — les codes/noms restent alignés sur
+   CETAL_COLORS (défini plus haut), utilisé par ailleurs par le <select>
+   du parcours standard. */
+const PD_COLOR_HEX = {
+  "1015":"#e9e2d0", "Yazd":"#cfc9be", "3012":"#c98f7c", "Ambre":"#c9a24a",
+  "Changi":"#a9b0a6", "6021":"#8fa889", "6005":"#2f4d3a", "6009":"#22392a",
+  "3004":"#7a2531", "5014":"#7c93b3", "5003":"#2c3f66", "5020":"#1f4a52",
+  "9010":"#f5f5f2", "7035":"#d3d4d2", "9006":"#c6c8c8", "9007":"#8d8f8e",
+  "7006":"#8f8578", "7039":"#6b6b62", "Mars":"#8a4a34", "8014":"#4a3626",
+  "8019":"#3e3733", "Noir 2100":"#1c1c1c", "7016":"#383e42", "9005":"#111111"
+};
+const PD_WOOD = [
+  {name:"Chêne doré", hex:"#a97442"},
+  {name:"Chêne foncé", hex:"#5b3a24"},
+  {name:"Frêne clair", hex:"#cbb896"},
+  {name:"Frêne grisé", hex:"#4a4741"}
+];
+
+const pdState = { theme:null, model:null, color:null, locked:false };
+
+function pdThemeBg(key){
+  return key === "retro" ? "#f4ede2" : key === "moderne" ? "#eaf0f8" : "#eaf3ee";
+}
+
+function pdSetStep(step){
+  document.querySelectorAll("#simPortailDesigner .pd-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("pdPanel" + step).classList.add("active");
+  document.querySelectorAll("#simPortailDesigner .pd-step-node").forEach(node => {
+    const n = parseInt(node.dataset.step, 10);
+    node.classList.remove("active", "done");
+    if(n < step) node.classList.add("done");
+    if(n === step) node.classList.add("active");
+  });
+}
+
+function pdRenderThemes(){
+  const grid = document.getElementById("pdThemeGrid");
+  grid.innerHTML = "";
+  Object.entries(PD_THEMES).forEach(([key, theme]) => {
+    const card = document.createElement("div");
+    card.className = "pd-theme-card";
+    card.dataset.theme = key;
+    card.innerHTML = `
+      <div class="pd-theme-visual">${PD_GATE_ICON[key]}</div>
+      <div class="pd-theme-body">
+        <h4>${theme.label}</h4>
+        <p>${theme.tagline}</p>
+      </div>`;
+    card.addEventListener("click", () => {
+      pdState.theme = key;
+      pdState.model = null;
+      pdState.color = null;
+      pdRenderModels();
+      pdSetStep(2);
+    });
+    grid.appendChild(card);
+  });
+}
+
+function pdRenderModels(){
+  const theme = PD_THEMES[pdState.theme];
+  const grid = document.getElementById("pdModelGrid");
+  grid.innerHTML = "";
+  theme.models.forEach(model => {
+    const card = document.createElement("div");
+    card.className = "pd-model-card";
+    card.innerHTML = `
+      <h5>${model.name}</h5>
+      <div class="pd-model-desc">${model.desc}</div>
+      <div class="pd-model-specs"><span class="pd-tag">${model.style}</span></div>
+    `;
+    card.addEventListener("click", () => {
+      pdState.model = model;
+      document.querySelectorAll(".pd-model-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      pdRenderColorStep();
+      pdSetStep(3);
+    });
+    grid.appendChild(card);
+  });
+}
+
+function pdRenderColorStep(){
+  const theme = PD_THEMES[pdState.theme];
+  const recap = document.getElementById("pdModelRecap");
+  recap.innerHTML = `
+    <div class="pd-mini-icon" style="background:${pdThemeBg(pdState.theme)}">${PD_GATE_ICON[pdState.theme]}</div>
+    <div class="pd-model-recap-text">
+      <h5>${pdState.model.name} — ${theme.label}</h5>
+      <span>${pdState.model.desc.slice(0, 70)}${pdState.model.desc.length > 70 ? "…" : ""}</span>
+    </div>`;
+
+  const colorGrid = document.getElementById("pdColorGrid");
+  colorGrid.innerHTML = "";
+  CETAL_COLORS.forEach(c => {
+    const hex = PD_COLOR_HEX[c.code] || "#cccccc";
+    const el = document.createElement("div");
+    el.className = "pd-color-swatch";
+    el.title = `${c.name} (${c.finish} - ${c.code})`;
+    el.innerHTML = `
+      <div class="pd-color-circle" style="background:${hex}"></div>
+      <span class="pd-color-name">${c.code}</span>`;
+    el.addEventListener("click", () => {
+      pdState.color = { label: `${c.name} (${c.finish} - ${c.code})`, wood:false };
+      document.querySelectorAll(".pd-color-swatch, .pd-wood-swatch").forEach(s => s.classList.remove("selected"));
+      el.classList.add("selected");
+      pdUpdateSummary();
+    });
+    colorGrid.appendChild(el);
+  });
+
+  const woodGrid = document.getElementById("pdWoodGrid");
+  woodGrid.innerHTML = "";
+  PD_WOOD.forEach(w => {
+    const el = document.createElement("div");
+    el.className = "pd-wood-swatch";
+    el.innerHTML = `
+      <div class="pd-wood-rect" style="background:${w.hex}"></div>
+      <span class="pd-color-name">${w.name}</span>`;
+    el.addEventListener("click", () => {
+      pdState.color = { label: `Ton bois — ${w.name} (avec plus-value)`, wood:true };
+      document.querySelectorAll(".pd-color-swatch, .pd-wood-swatch").forEach(s => s.classList.remove("selected"));
+      el.classList.add("selected");
+      pdUpdateSummary();
+    });
+    woodGrid.appendChild(el);
+  });
+
+  document.getElementById("pdSummary").style.display = "none";
+}
+
+function pdUpdateSummary(){
+  const box = document.getElementById("pdSummary");
+  const line = document.getElementById("pdSummaryLine");
+  if(pdState.theme && pdState.model && pdState.color){
+    box.style.display = "block";
+    line.innerHTML = `<b>Thème :</b> ${PD_THEMES[pdState.theme].label} &nbsp;·&nbsp; <b>Modèle :</b> ${pdState.model.name} &nbsp;·&nbsp; <b>Finition :</b> ${pdState.color.label}`;
+  }
+}
+
+function pdLockDesign(){
+  if(!(pdState.theme && pdState.model && pdState.color)) return;
+  pdState.locked = true;
+  document.getElementById("pdLockedLine").innerHTML =
+    `<b>${pdState.model.name}</b> (${PD_THEMES[pdState.theme].label}) — ${pdState.color.label}`;
+  document.getElementById("pdLockedSummary").style.display = "block";
+  document.querySelectorAll("#simPortailDesigner .pd-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("pdStepper").style.display = "none";
+}
+
+function pdUnlockDesign(){
+  pdState.locked = false;
+  document.getElementById("pdLockedSummary").style.display = "none";
+  document.getElementById("pdStepper").style.display = "flex";
+  pdSetStep(pdState.color ? 3 : pdState.model ? 3 : pdState.theme ? 2 : 1);
+}
+
+function pdReset(){
+  pdState.theme = null;
+  pdState.model = null;
+  pdState.color = null;
+  pdState.locked = false;
+  document.getElementById("pdLockedSummary").style.display = "none";
+  document.getElementById("pdStepper").style.display = "flex";
+  document.querySelectorAll(".pd-model-card, .pd-color-swatch, .pd-wood-swatch").forEach(el => el.classList.remove("selected"));
+  const s = document.getElementById("pdSummary");
+  if(s) s.style.display = "none";
+  pdSetStep(1);
+}
+
+/* Bascule entre le parcours standard (<select>) et le concepteur IA guidé,
+   selon le produit choisi à l'étape 2 du simulateur. */
+function togglePortailDesigner(categoryKey){
+  const isPortail = categoryKey === "portails-clotures";
+  document.getElementById("simStandardFields").style.display = isPortail ? "none" : "block";
+  document.getElementById("simPortailDesigner").style.display = isPortail ? "block" : "none";
+  if(isPortail && !pdState.theme){
+    pdRenderThemes();
+    pdSetStep(1);
+  }
+}
+
 const REAL_MODELS = {
   "fenetres": [
     {name:"Finstral FIN-Project 78", desc:"Fenêtre PVC 4 chambres, triple vitrage, profil 78 mm, ferrage caché."},
@@ -2067,6 +2440,7 @@ function simPopulateProductSelect(){
     select.appendChild(opt);
   });
   simPopulateModelSelect(select.value);
+  togglePortailDesigner(select.value);
 }
 
 /* ---------- Remplissage dynamique du <select> "modèle réel" en fonction de la catégorie choisie ---------- */
@@ -2360,13 +2734,31 @@ async function simGenerateRender(){
     return;
   }
 
-  const models = REAL_MODELS[productKey] || [];
-  const modelSelect = document.getElementById("simModelSelect");
-  const realModel = models.find(m => m.name === modelSelect.value) || null;
+  const isPortailDesign = productKey === "portails-clotures";
+
+  let realModel = null;
+  let colorChoice = "";
+  let decorChoice = "";
+
+  if(isPortailDesign){
+    // Le design vient du Concepteur IA (thème -> modèle -> finition) : on
+    // exige un design conception achevé et validé avant de générer.
+    if(!(pdState.theme && pdState.model && pdState.color)){
+      alert("Merci de terminer la conception de votre portail (thème, modèle et finition) avant de générer le rendu.");
+      return;
+    }
+    if(!pdState.locked) pdLockDesign();
+    realModel = pdState.model; // objet CETAL_PORTAIL_MODELS (name, desc, refKey, decors)
+    colorChoice = pdState.color.label;
+  }else{
+    const models = REAL_MODELS[productKey] || [];
+    const modelSelect = document.getElementById("simModelSelect");
+    realModel = models.find(m => m.name === modelSelect.value) || null;
+    colorChoice = document.getElementById("simColorSelect") ? document.getElementById("simColorSelect").value : "";
+    decorChoice = document.getElementById("simDecorSelect") ? document.getElementById("simDecorSelect").value : "";
+  }
 
   const customText = document.getElementById("simCustomText").value;
-  const colorChoice = document.getElementById("simColorSelect") ? document.getElementById("simColorSelect").value : "";
-  const decorChoice = document.getElementById("simDecorSelect") ? document.getElementById("simDecorSelect").value : "";
 
   if(!simIsPuterAvailable()){
     alert("Le module Puter.js n'a pas pu se charger (vérifiez votre connexion Internet) — le simulateur ne peut pas fonctionner sans lui.");
@@ -2445,6 +2837,7 @@ function simReset(){
   if(colorSelectReset) colorSelectReset.selectedIndex = 0;
   const decorSelectReset = document.getElementById("simDecorSelect");
   if(decorSelectReset) decorSelectReset.selectedIndex = 0;
+  if(document.getElementById("simProductSelect").value === "portails-clotures") pdReset();
   document.getElementById("simPlaceholder").style.display = "block";
   document.getElementById("baCompare").classList.remove("show");
   document.getElementById("baRange").style.display = "none";
@@ -3645,8 +4038,14 @@ document.getElementById("simFileInput").addEventListener("change", async (e) => 
 
 document.getElementById("simProductSelect").addEventListener("change", (e) => {
   simPopulateModelSelect(e.target.value);
+  togglePortailDesigner(e.target.value);
 });
 document.getElementById("simModelSelect").addEventListener("change", simUpdateModelDesc);
+
+document.getElementById("pdBackToStep1").addEventListener("click", () => pdSetStep(1));
+document.getElementById("pdBackToStep2").addEventListener("click", () => pdSetStep(2));
+document.getElementById("pdConfirmBtn").addEventListener("click", pdLockDesign);
+document.getElementById("pdEditBtn").addEventListener("click", pdUnlockDesign);
 
 document.getElementById("simGenerateBtn").addEventListener("click", simGenerateRender);
 document.getElementById("simAuthSignInBtn").addEventListener("click", simHandleSignInClick);
