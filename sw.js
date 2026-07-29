@@ -4,14 +4,16 @@
    passent pas par ce cache : ils sont gérés à part dans IndexedDB par app.
 */
 
-const CACHE_NAME = "foultot-digital-shell-v1";
+const CACHE_NAME = "foultot-digital-shell-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
-  "./icon-512-maskable.png"
+  "./icon-512-maskable.png",
+  "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
+  "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
 ];
 
 self.addEventListener("install", (event) => {
@@ -35,21 +37,26 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // On ne touche jamais aux appels Firebase/Firestore/Storage : ils doivent
-  // passer directement par le réseau (ou échouer proprement si hors-ligne,
-  // Firestore gère déjà sa propre persistance).
+  // On ne touche jamais aux appels de DONNÉES Firebase/Firestore/Storage : ils
+  // doivent passer directement par le réseau (ou échouer proprement si
+  // hors-ligne, Firestore gère déjà sa propre persistance).
+  // ATTENTION : gstatic.com n'est PAS exclu ici, car c'est de là que vient le
+  // SDK Firebase lui-même (fichiers JS statiques) — il doit être mis en cache
+  // comme le reste de l'app shell, sinon l'app ne peut même pas démarrer
+  // Firebase hors-ligne.
   if (
     url.hostname.includes("firestore.googleapis.com") ||
     url.hostname.includes("googleapis.com") ||
     url.hostname.includes("firebasestorage") ||
-    url.hostname.includes("firebaseapp.com") ||
-    url.hostname.includes("gstatic.com")
+    url.hostname.includes("firebaseapp.com")
   ) {
     return;
   }
 
-  // Seulement les requêtes GET du même domaine (l'app shell)
-  if (event.request.method !== "GET" || url.origin !== self.location.origin) {
+  // Requêtes GET du même domaine (app shell) OU du CDN gstatic (SDK Firebase)
+  const isSameOrigin = url.origin === self.location.origin;
+  const isGstatic = url.hostname.includes("gstatic.com");
+  if (event.request.method !== "GET" || !(isSameOrigin || isGstatic)) {
     return;
   }
 
