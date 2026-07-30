@@ -1690,6 +1690,16 @@ display:block;
 .pd-wood-swatch.selected .pd-wood-rect{box-shadow:0 0 0 2px white, 0 0 0 4px var(--navy);}
 .pd-plusvalue{font-size:8px;color:var(--gold);font-weight:700;display:block;}
 
+/* Décor / motif du modèle (ex: 12 motifs Planétaire, tôles Hercule, embouts Rétro...) —
+   étape ajoutée pour corriger le bug de génération : sans ce choix explicite, l'IA
+   devait deviner un motif au hasard parmi toutes les variantes du modèle. */
+.pd-decor-section{display:none;}
+.pd-decor-section.active{display:block;}
+.pd-decors{display:flex;flex-wrap:wrap;gap:7px;}
+.pd-decor-chip{cursor:pointer;font-size:10.5px;font-weight:600;color:var(--navy);background:white;border:1px solid var(--border);border-radius:20px;padding:6px 12px;transition:box-shadow .15s ease, border-color .15s ease;}
+.pd-decor-chip:hover{box-shadow:0 4px 10px rgba(6,43,85,.10);border-color:var(--navy-light);}
+.pd-decor-chip.selected{border-color:var(--navy);background:var(--navy);color:white;}
+
 /* Récapitulatif final du design (remplace le bouton "Valider ma sélection" de l'ancien configurateur) */
 .pd-summary{margin-top:14px;background:var(--navy);border-radius:var(--pd-radius);padding:12px 14px;color:white;}
 .pd-summary-line{font-size:11.5px;opacity:.92;line-height:1.6;}
@@ -1922,7 +1932,13 @@ display:block;
   <button class="pd-back-btn" id="pdBackToStep2">&larr; Changer de modèle</button>
   <div class="pd-model-recap" id="pdModelRecap"></div>
 
+  <div class="pd-decor-section" id="pdDecorSection">
+    <div class="pd-color-section-label" id="pdDecorLabel">Décor / motif du modèle</div>
+    <div class="pd-decors" id="pdDecorGrid"></div>
+  </div>
+
   <div class="pd-color-section-label">Teintes standard</div>
+
   <div class="pd-colors" id="pdColorGrid"></div>
 
   <div class="pd-color-section-label">Teintes ton bois <span class="pd-plusvalue" style="display:inline">(plus-value)</span></div>
@@ -2060,8 +2076,13 @@ const categories = [
 const SIM_PUTER_MODEL = "google/gemini-2.5-flash-image";
 
 // Liste des produits proposés dans le simulateur : on réutilise le
-// catalogue "categories" déjà défini plus haut (hors catalogues fournisseurs).
-const SIM_PRODUCTS = categories.filter(c => !c.standalone);
+// Simulateur IA : gamme unique "Portail Cetal" (toutes les autres gammes ont
+// été retirées du générateur IA à la demande de Lucas). NB : volontairement
+// découplé du tableau `categories` ci-dessus, qui lui continue d'alimenter le
+// catalogue photo / la navigation du reste du site pour toutes les gammes.
+const SIM_PRODUCTS = [
+  {key:"portails-clotures", name:"Portails & clôtures", sub:"Cetal"}
+];
 
 /* ---------- MODÈLES RÉELS PAR CATÉGORIE / MARQUE ----------
    Chaque entrée de catégorie (clé = category.key) donne la liste
@@ -2210,7 +2231,7 @@ const PD_WOOD = [
   {name:"Frêne grisé", hex:"#4a4741"}
 ];
 
-const pdState = { theme:null, model:null, color:null, locked:false };
+const pdState = { theme:null, model:null, decor:null, color:null, locked:false };
 
 function pdThemeBg(key){
   return key === "retro" ? "#f4ede2" : key === "moderne" ? "#eaf0f8" : "#eaf3ee";
@@ -2265,12 +2286,47 @@ function pdRenderModels(){
     `;
     card.addEventListener("click", () => {
       pdState.model = model;
+      pdState.decor = null;
       document.querySelectorAll(".pd-model-card").forEach(c => c.classList.remove("selected"));
       card.classList.add("selected");
       pdRenderColorStep();
       pdSetStep(3);
     });
     grid.appendChild(card);
+  });
+}
+
+/* Rendu de l'étape "décor / motif" : uniquement affichée si le modèle sélectionné
+   possède plusieurs déclinaisons (model.decors). C'est ce choix qui manquait
+   auparavant : le modèle réel choisi (ex: "Cetal Planétaire", 12 motifs possibles)
+   était transmis à l'IA SANS préciser lequel des motifs générer, qui en devinait
+   donc un au hasard — d'où des rendus ne correspondant pas au modèle demandé. */
+function pdRenderDecorStep(){
+  const section = document.getElementById("pdDecorSection");
+  const grid = document.getElementById("pdDecorGrid");
+  const label = document.getElementById("pdDecorLabel");
+  grid.innerHTML = "";
+
+  const decors = pdState.model.decors;
+  if(!decors || !decors.length){
+    section.classList.remove("active");
+    return;
+  }
+
+  section.classList.add("active");
+  label.textContent = `Décor / motif du modèle (${decors.length} choix disponibles)`;
+
+  decors.forEach(decorName => {
+    const chip = document.createElement("div");
+    chip.className = "pd-decor-chip";
+    chip.textContent = decorName;
+    chip.addEventListener("click", () => {
+      pdState.decor = decorName;
+      document.querySelectorAll(".pd-decor-chip").forEach(c => c.classList.remove("selected"));
+      chip.classList.add("selected");
+      pdUpdateSummary();
+    });
+    grid.appendChild(chip);
   });
 }
 
@@ -2283,6 +2339,8 @@ function pdRenderColorStep(){
       <h5>${pdState.model.name} — ${theme.label}</h5>
       <span>${pdState.model.desc.slice(0, 70)}${pdState.model.desc.length > 70 ? "…" : ""}</span>
     </div>`;
+
+  pdRenderDecorStep();
 
   const colorGrid = document.getElementById("pdColorGrid");
   colorGrid.innerHTML = "";
@@ -2323,20 +2381,31 @@ function pdRenderColorStep(){
   document.getElementById("pdSummary").style.display = "none";
 }
 
+/* Un modèle avec plusieurs déclinaisons (model.decors) exige un décor choisi
+   avant de pouvoir valider le design — sinon l'IA reçoit un modèle "générique"
+   sans savoir laquelle des variantes reproduire. */
+function pdDecorSatisfied(){
+  return !pdState.model || !pdState.model.decors || !pdState.model.decors.length || !!pdState.decor;
+}
+
 function pdUpdateSummary(){
   const box = document.getElementById("pdSummary");
   const line = document.getElementById("pdSummaryLine");
-  if(pdState.theme && pdState.model && pdState.color){
+  if(pdState.theme && pdState.model && pdState.color && pdDecorSatisfied()){
     box.style.display = "block";
-    line.innerHTML = `<b>Thème :</b> ${PD_THEMES[pdState.theme].label} &nbsp;·&nbsp; <b>Modèle :</b> ${pdState.model.name} &nbsp;·&nbsp; <b>Finition :</b> ${pdState.color.label}`;
+    const decorPart = pdState.decor ? ` &nbsp;·&nbsp; <b>Décor :</b> ${pdState.decor}` : "";
+    line.innerHTML = `<b>Thème :</b> ${PD_THEMES[pdState.theme].label} &nbsp;·&nbsp; <b>Modèle :</b> ${pdState.model.name}${decorPart} &nbsp;·&nbsp; <b>Finition :</b> ${pdState.color.label}`;
+  }else{
+    box.style.display = "none";
   }
 }
 
 function pdLockDesign(){
-  if(!(pdState.theme && pdState.model && pdState.color)) return;
+  if(!(pdState.theme && pdState.model && pdState.color && pdDecorSatisfied())) return;
   pdState.locked = true;
+  const decorPart = pdState.decor ? ` — Décor ${pdState.decor}` : "";
   document.getElementById("pdLockedLine").innerHTML =
-    `<b>${pdState.model.name}</b> (${PD_THEMES[pdState.theme].label}) — ${pdState.color.label}`;
+    `<b>${pdState.model.name}</b> (${PD_THEMES[pdState.theme].label})${decorPart} — ${pdState.color.label}`;
   document.getElementById("pdLockedSummary").style.display = "block";
   document.querySelectorAll("#simPortailDesigner .pd-panel").forEach(p => p.classList.remove("active"));
   document.getElementById("pdStepper").style.display = "none";
@@ -2352,11 +2421,12 @@ function pdUnlockDesign(){
 function pdReset(){
   pdState.theme = null;
   pdState.model = null;
+  pdState.decor = null;
   pdState.color = null;
   pdState.locked = false;
   document.getElementById("pdLockedSummary").style.display = "none";
   document.getElementById("pdStepper").style.display = "flex";
-  document.querySelectorAll(".pd-model-card, .pd-color-swatch, .pd-wood-swatch").forEach(el => el.classList.remove("selected"));
+  document.querySelectorAll(".pd-model-card, .pd-decor-chip, .pd-color-swatch, .pd-wood-swatch").forEach(el => el.classList.remove("selected"));
   const s = document.getElementById("pdSummary");
   if(s) s.style.display = "none";
   pdSetStep(1);
@@ -2374,56 +2444,11 @@ function togglePortailDesigner(categoryKey){
   }
 }
 
+// Générateur IA restreint à la seule gamme "Portail Cetal" (les autres gammes
+// - fenêtres, portes, pergolas, stores, volets, moustiquaires, brise-vue,
+// garde-corps - ont été retirées du simulateur à la demande de Lucas).
 const REAL_MODELS = {
-  "fenetres": [
-    {name:"Finstral FIN-Project 78", desc:"Fenêtre PVC 4 chambres, triple vitrage, profil 78 mm, ferrage caché."},
-    {name:"Finstral FIN-Project A1", desc:"Fenêtre aluminium haut de gamme, rupture de pont thermique, grandes surfaces vitrées."},
-    {name:"Finstral KAB FIN-Project", desc:"Fenêtre mixte alu/PVC, finition extérieure aluminium et confort PVC intérieur."},
-    {name:"Bieber Confort 70", desc:"Fenêtre PVC 5 chambres, profil 70 mm, double ou triple vitrage."},
-    {name:"Bieber Alu Design", desc:"Fenêtre aluminium à profils fins, ouvrant caché, grande transparence."}
-  ],
-  "portes-entree": [
-    {name:"Inotherm AGE 100", desc:"Porte d'entrée aluminium, panneau plein, isolation renforcée, gamme entrée de gamme design épuré."},
-    {name:"Inotherm AGE 102", desc:"Porte d'entrée aluminium avec bandeau vitré latéral fin, ligne contemporaine."},
-    {name:"Inotherm AGE 120", desc:"Porte d'entrée aluminium à décor central rainuré, finition mate ou satinée."},
-    {name:"Inotherm AGE 140", desc:"Porte d'entrée aluminium avec large partie vitrée verticale, luminosité accrue dans le hall d'entrée."},
-    {name:"Inotherm EXCLUSIV AGE 105", desc:"Porte d'entrée haut de gamme, décor 3D pressé, poignée design intégrée, forte isolation thermique."}
-  ],
-  "portes-garage": [
-    {name:"Moos Sectionnelle S40", desc:"Porte de garage sectionnelle, panneaux à âme isolante, rails latéraux, ouverture verticale."},
-    {name:"Moos Enroulable E20", desc:"Porte de garage enroulable, lames aluminium, encombrement réduit sous linteau."},
-    {name:"Gypass Basculante B10", desc:"Porte de garage basculante débordante, structure acier renforcée."},
-    {name:"Gypass Sectionnelle Premium", desc:"Porte de garage sectionnelle avec hublots optionnels, motorisation compatible."}
-  ],
-  "pergolas": [
-    {name:"Brustor B200", desc:"Pergola bioclimatique à lames orientables aluminium, structure autoportante."},
-    {name:"Brustor B300", desc:"Pergola adossée avec toile rétractable, structure aluminium laqué."},
-    {name:"Brustor B500", desc:"Pergola bioclimatique haut de gamme avec gestion d'eau intégrée dans les lames."}
-  ],
-  "stores-bannes": [
-    {name:"Brustor B120", desc:"Store banne monobloc, coffre intégral, toile rétractable, bras articulés."},
-    {name:"Brustor B150", desc:"Store banne à coffre semi-intégral, grande largeur, motorisation filaire ou radio."}
-  ],
-  "portails-clotures": CETAL_PORTAIL_MODELS,
-  "volets-roulants": [
-    {name:"Roma Rénovation", desc:"Volet roulant en pose applique/rénovation, lames aluminium, coffre compact."},
-    {name:"Roma Coffre Intégré", desc:"Volet roulant à coffre intégré à la construction, isolation thermique renforcée."}
-  ],
-  "volets-battants": [
-    {name:"Ehret Persienne Alu", desc:"Volet battant aluminium à persiennes orientables ou fixes, plusieurs teintes RAL."},
-    {name:"Ehret Panneau Plein", desc:"Volet battant aluminium à panneau plein, style traditionnel ou contemporain."}
-  ],
-  "moustiquaires": [
-    {name:"AMB Enroulable Verticale", desc:"Moustiquaire enroulable verticale pour fenêtre, toile fibre de verre, coffre discret."},
-    {name:"AMB Battante", desc:"Moustiquaire battante pour porte-fenêtre, cadre aluminium, ouverture à la française."}
-  ],
-  "brise-vue": [
-    {name:"Cetal Brise-vue Lames Alu", desc:"Brise-vue aluminium à lames horizontales ou verticales, occultation totale, plusieurs teintes."}
-  ],
-  "garde-corps": [
-    {name:"Cetal Garde-corps Alu/Verre", desc:"Garde-corps aluminium avec remplissage verre trempé, finition sur mesure."},
-    {name:"Cetal Garde-corps Câbles Inox", desc:"Garde-corps aluminium à remplissage câbles inox tendus, esthétique épurée."}
-  ]
+  "portails-clotures": CETAL_PORTAIL_MODELS
 };
 
 let simUploadedImage = null; // {base64, mimeType, dataUrl}
@@ -2741,15 +2766,24 @@ async function simGenerateRender(){
   let decorChoice = "";
 
   if(isPortailDesign){
-    // Le design vient du Concepteur IA (thème -> modèle -> finition) : on
+    // Le design vient du Concepteur IA (thème -> modèle -> décor -> finition) : on
     // exige un design conception achevé et validé avant de générer.
     if(!(pdState.theme && pdState.model && pdState.color)){
       alert("Merci de terminer la conception de votre portail (thème, modèle et finition) avant de générer le rendu.");
       return;
     }
+    if(!pdDecorSatisfied()){
+      alert("Merci de choisir un décor / motif pour ce modèle avant de générer le rendu.");
+      return;
+    }
     if(!pdState.locked) pdLockDesign();
     realModel = pdState.model; // objet CETAL_PORTAIL_MODELS (name, desc, refKey, decors)
     colorChoice = pdState.color.label;
+    // BUG CORRIGÉ : pdState.decor (le motif/décor précis choisi par l'utilisateur
+    // parmi les variantes du modèle, ex. l'un des 12 motifs de la Planétaire)
+    // n'était jamais transmis au prompt. L'IA devait donc deviner un motif au
+    // hasard, d'où des rendus ne correspondant pas au modèle demandé.
+    decorChoice = pdState.decor || "";
   }else{
     const models = REAL_MODELS[productKey] || [];
     const modelSelect = document.getElementById("simModelSelect");
