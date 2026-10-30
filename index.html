@@ -1716,7 +1716,8 @@ display:block;
 
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
-<script src="https://js.puter.com/v2/"></script>
+<!-- async : sans réseau (ou en 4G faible), ce script ne bloque plus l'affichage de l'appli -->
+<script src="https://js.puter.com/v2/" async id="puterScript"></script>
 </head>
 
 <body>
@@ -2927,9 +2928,14 @@ async function initFirebase(){
       query: firestoreMod.query,
       where: firestoreMod.where,
       getDocs: firestoreMod.getDocs,
-      deleteField: firestoreMod.deleteField
+      deleteField: firestoreMod.deleteField,
+      getDoc: firestoreMod.getDoc,
+      getDocFromCache: firestoreMod.getDocFromCache,
+      getDocsFromCache: firestoreMod.getDocsFromCache,
+      writeBatch: firestoreMod.writeBatch
     };
     listenToFiles();
+    if(MIGRATION_MODE) openMigrationPanel();
   }catch(err){
     console.error(err);
     setSyncStatus("offline", "Erreur de connexion Firebase");
@@ -2949,15 +2955,318 @@ function listenToFiles(){
       pending: d.metadata.hasPendingWrites
     }));
     if(snapshot.metadata.fromCache){
-      setSyncStatus(navigator.onLine ? "syncing" : "offline", navigator.onLine ? "Synchronisation…" : "Hors-ligne (cache local)");
+      setSyncStatus(navigator.onLine ? "syncing" : "offline", navigator.onLine ? "Synchronisation…" : offlineLabel());
     }else{
+      serverSnapshotReceived = true;
+      saveLastSync();
       setSyncStatus("online", "Synchronisé");
+      schedulePrefetch();
     }
     renderSidebar();
     renderCurrentView();
   }, (err) => {
     console.error(err);
-    setSyncStatus("offline", "Hors-ligne (cache local)");
+    setSyncStatus("offline", offlineLabel());
+  });
+}
+
+/* ---------- SYNCHRO ALLÉGÉE : MINIATURES / FICHIERS COMPLETS ----------
+   files/{id}     -> infos + petite miniature "thumb" (~15-25 Ko) : c'est la
+                     seule chose téléchargée au démarrage -> synchro rapide.
+   fileBlobs/{id} -> le fichier complet "dataURL" : téléchargé UNE SEULE FOIS
+                     par appareil (en arrière-plan), puis gardé hors-ligne.
+   Les anciens documents (dataURL directement dans files) restent lisibles
+   tant que la migration (?migration) n'a pas été faite. */
+
+const THUMB_MAX_WIDTH = 400;
+const THUMB_QUALITY = 0.6;
+const CATALOG_THUMB_MAX_WIDTH = 420;
+const PREFETCH_PARALLEL = 3;
+const MIGRATION_MODE = new URLSearchParams(location.search).has("migration");
+
+function thumbOf(f){
+  return f ? (f.thumb || f.dataURL || null) : null;
+}
+
+function isSplit(f){
+  return !!(f && f.blob && !f.dataURL);
+}
+
+/* Mémoire de session pour les photos en grand (limitée pour ne pas saturer la tablette) */
+const fullCache = new Map();
+const FULL_CACHE_MAX = 30;
+function rememberFull(id, url){
+  fullCache.delete(id);
+  fullCache.set(id, url);
+  if(fullCache.size > FULL_CACHE_MAX) fullCache.delete(fullCache.keys().next().value);
+}
+
+/* Ids dont le fichier complet est déjà stocké sur cet appareil */
+const localBlobIds = new Set();
+
+async function readBlobDoc(id, allowNetwork){
+  const ref = fbFns.doc(db, "fileBlobs", id);
+  try{
+    const s = await fbFns.getDocFromCache(ref);
+    if(s.exists()) return s;
+  }catch(e){ /* pas encore sur l'appareil */ }
+  if(!allowNetwork) return null;
+  try{
+    const s = await fbFns.getDoc(ref);
+    return s.exists() ? s : null;
+  }catch(e){
+    console.warn("fileBlobs indisponible", id, e);
+    return null;
+  }
+}
+
+/* Renvoie le fichier complet : mémoire -> appareil -> réseau. À défaut, la miniature. */
+async function getFullDataURL(f){
+  if(!f) return null;
+  if(f.dataURL) return f.dataURL;
+  if(!f.blob) return f.thumb || null;
+  if(fullCache.has(f.id)) return fullCache.get(f.id);
+  const s = await readBlobDoc(f.id, true);
+  const url = s ? s.data().dataURL : null;
+  if(url){
+    rememberFull(f.id, url);
+    localBlobIds.add(f.id);
+    return url;
+  }
+  return f.thumb || null;
+}
+
+function makeThumbFromDataURL(src, maxWidth = THUMB_MAX_WIDTH, quality = THUMB_QUALITY){
+  return new Promise((resolve) => {
+    if(!src){ resolve(null); return; }
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if(w > maxWidth){
+        h = Math.round(h * (maxWidth / w));
+        w = maxWidth;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/* Préchargement hors-ligne : chaque photo en grand n'est téléchargée qu'une fois */
+let prefetchRunning = false;
+let prefetchAgain = false;
+
+function schedulePrefetch(){
+  if(prefetchRunning){ prefetchAgain = true; return; }
+  clearTimeout(schedulePrefetch._tm);
+  schedulePrefetch._tm = setTimeout(runPrefetch, 1200);
+}
+
+async function runPrefetch(){
+  if(prefetchRunning || !db) return;
+  prefetchRunning = true;
+  try{
+    do{
+      prefetchAgain = false;
+      const candidates = allFiles.filter(f => isSplit(f) && !localBlobIds.has(f.id));
+
+      // 1) ce qui est déjà sur l'appareil (lecture locale, zéro réseau)
+      const missing = [];
+      for(const f of candidates){
+        const s = await readBlobDoc(f.id, false);
+        if(s) localBlobIds.add(f.id); else missing.push(f);
+      }
+      if(missing.length === 0) break;
+
+      // 2) téléchargement de ce qui manque, quelques fichiers à la fois
+      const total = missing.length;
+      let done = 0;
+      const queue = missing.slice();
+      const worker = async () => {
+        while(queue.length && navigator.onLine){
+          const f = queue.shift();
+          const s = await readBlobDoc(f.id, true);
+          if(s) localBlobIds.add(f.id);
+          done++;
+          setSyncStatus("syncing", `Mise hors-ligne ${done}/${total}`);
+        }
+      };
+      setSyncStatus("syncing", `Mise hors-ligne 0/${total}`);
+      await Promise.all(Array.from({length: PREFETCH_PARALLEL}, worker));
+      if(navigator.onLine) setSyncStatus("online", "Synchronisé");
+      else setSyncStatus("offline", offlineLabel());
+    }while(prefetchAgain && navigator.onLine);
+  }catch(err){
+    console.error(err);
+  }finally{
+    prefetchRunning = false;
+  }
+}
+
+/* Catalogues : on relit d'abord la copie locale, le réseau seulement si incomplète */
+async function getCatalogPageDocs(file){
+  const q = fbFns.query(fbFns.collection(db, "catalogPages"), fbFns.where("catalogId", "==", file.catalogId));
+  try{
+    const cached = await fbFns.getDocsFromCache(q);
+    if(cached.size > 0 && (!file.pageCount || cached.size >= file.pageCount)) return cached;
+  }catch(e){ /* rien en local */ }
+  return await fbFns.getDocs(q);
+}
+
+/* Date de dernière synchro (affichée quand on est hors-ligne) */
+function saveLastSync(){
+  try{ localStorage.setItem("fd_last_sync", String(Date.now())); }catch(e){}
+}
+
+function offlineLabel(){
+  let t = 0;
+  try{ t = Number(localStorage.getItem("fd_last_sync")) || 0; }catch(e){}
+  if(!t) return "Hors-ligne (cache local)";
+  const d = new Date(t);
+  return "Hors-ligne · synchro du " +
+    d.toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"}) + " à " +
+    d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"});
+}
+
+/* ---------- MIGRATION (à lancer UNE FOIS sur le PC : index.html?migration) ---------- */
+
+let serverSnapshotReceived = false;
+
+function legacyDocs(){
+  return allFiles.filter(f => f.dataURL && (f.type === "catalog" || (f.type && (f.type.startsWith("image/") || f.type === "application/pdf"))));
+}
+
+function openMigrationPanel(){
+  const wrap = document.createElement("div");
+  wrap.id = "migrationPanel";
+  wrap.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(6,43,85,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
+  wrap.innerHTML = `
+    <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;padding:22px;font-family:inherit;color:#1d2a3a;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h2 style="margin:0 0 6px;font-size:18px;color:#062b55">Migration : synchro allégée</h2>
+      <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#5f6b7a">Sépare les miniatures des fichiers complets. À faire une seule fois, sur le PC, en wifi stable. Ne ferme pas la page pendant l'opération.</p>
+      <div id="migStats" style="font-size:14px;margin-bottom:14px">Chargement de la liste depuis le serveur…</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button id="migBackup" disabled style="padding:11px;border-radius:9px;border:1px solid #062b55;background:#fff;color:#062b55;font-weight:700;cursor:pointer">1. Télécharger une sauvegarde (.json)</button>
+        <button id="migRun" disabled style="padding:11px;border-radius:9px;border:none;background:#062b55;color:#fff;font-weight:700;cursor:pointer;opacity:.5">2. Lancer la migration</button>
+        <label style="font-size:12px;color:#5f6b7a;margin-top:6px;cursor:pointer">Restaurer une sauvegarde : <input type="file" id="migRestore" accept=".json,application/json" style="font-size:12px"></label>
+      </div>
+      <div id="migLog" style="margin-top:14px;font-size:13px;min-height:18px"></div>
+      <div style="text-align:right;margin-top:10px"><button id="migClose" style="background:none;border:none;color:#062b55;font-weight:700;cursor:pointer">Fermer</button></div>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  const stats = wrap.querySelector("#migStats");
+  const btnBackup = wrap.querySelector("#migBackup");
+  const btnRun = wrap.querySelector("#migRun");
+  const log = wrap.querySelector("#migLog");
+  let backupDone = false;
+  let running = false;
+
+  const refresh = () => {
+    if(!serverSnapshotReceived){ setTimeout(refresh, 500); return; }
+    const docs = legacyDocs();
+    const nCat = docs.filter(f => f.type === "catalog").length;
+    stats.innerHTML = docs.length === 0
+      ? "<b>Rien à migrer</b> : tout est déjà au nouveau format."
+      : `<b>${docs.length - nCat}</b> photo(s)/PDF et <b>${nCat}</b> catalogue(s) à migrer.`;
+    btnBackup.disabled = docs.length === 0;
+    const canRun = docs.length > 0 && backupDone && !running;
+    btnRun.disabled = !canRun;
+    btnRun.style.opacity = canRun ? "1" : ".5";
+  };
+  refresh();
+
+  btnBackup.addEventListener("click", () => {
+    const docs = legacyDocs();
+    const parts = ["["];
+    docs.forEach((f, i) => {
+      const {id, pending, ...data} = f;
+      parts.push((i ? "," : "") + JSON.stringify({id, data}));
+    });
+    parts.push("]");
+    const blob = new Blob(parts, {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    const d = new Date();
+    a.download = `sauvegarde-foultot-digital-${d.toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    backupDone = true;
+    log.textContent = `Sauvegarde téléchargée (${docs.length} fichiers, ${formatSize(blob.size)}). Garde-la précieusement.`;
+    refresh();
+  });
+
+  btnRun.addEventListener("click", async () => {
+    if(running) return;
+    if(!navigator.onLine){ log.textContent = "Pas de connexion : migration impossible."; return; }
+    running = true;
+    refresh();
+    const docs = legacyDocs();
+    let ok = 0, ko = 0;
+    for(const f of docs){
+      try{
+        const isCatalog = f.type === "catalog";
+        const isImage = f.type && f.type.startsWith("image/");
+        const thumb = (isCatalog || isImage)
+          ? await makeThumbFromDataURL(f.dataURL, isCatalog ? CATALOG_THUMB_MAX_WIDTH : THUMB_MAX_WIDTH, THUMB_QUALITY)
+          : null;
+        const batch = fbFns.writeBatch(db);
+        const fileRef = fbFns.doc(db, "files", f.id);
+        if(isCatalog){
+          batch.update(fileRef, {thumb: thumb || null, dataURL: fbFns.deleteField()});
+        }else{
+          batch.set(fbFns.doc(db, "fileBlobs", f.id), {dataURL: f.dataURL});
+          batch.update(fileRef, {thumb: thumb || null, blob: true, dataURL: fbFns.deleteField()});
+        }
+        await batch.commit();
+        if(!isCatalog){ localBlobIds.add(f.id); }
+        ok++;
+      }catch(err){
+        console.error("Migration échouée pour", f.id, err);
+        ko++;
+      }
+      log.textContent = `Migration en cours… ${ok + ko}/${docs.length}` + (ko ? ` (${ko} erreur(s))` : "");
+    }
+    running = false;
+    log.innerHTML = ko
+      ? `<b style="color:#c94b4b">Terminé avec ${ko} erreur(s)</b> sur ${docs.length}. Vérifie les règles Firestore (collection fileBlobs) puis relance : seuls les fichiers restants seront traités.`
+      : `<b style="color:#2fa84f">Migration terminée</b> : ${ok} fichier(s). Tu peux fermer ce panneau.`;
+    refresh();
+  });
+
+  wrap.querySelector("#migRestore").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(!window.confirm("Restaurer cette sauvegarde ? Les fichiers concernés reviendront à l'ancien format.")) return;
+    try{
+      const items = JSON.parse(await file.text());
+      let n = 0;
+      for(const it of items){
+        await fbFns.setDoc(fbFns.doc(db, "files", it.id), it.data);
+        n++;
+        log.textContent = `Restauration… ${n}/${items.length}`;
+      }
+      log.innerHTML = `<b>Restauration terminée</b> : ${n} fichier(s).`;
+    }catch(err){
+      console.error(err);
+      log.textContent = "Restauration impossible : fichier de sauvegarde invalide ?";
+    }
+    refresh();
+  });
+
+  wrap.querySelector("#migClose").addEventListener("click", () => {
+    if(running){ showToast("Migration en cours, patiente jusqu'à la fin"); return; }
+    wrap.remove();
   });
 }
 
@@ -3009,8 +3318,8 @@ async function removeFolderCover(folderMeta){
   }
 }
 
-window.addEventListener("online", () => setSyncStatus("syncing", "Reconnexion…"));
-window.addEventListener("offline", () => setSyncStatus("offline", "Hors-ligne (cache local)"));
+window.addEventListener("online", () => { setSyncStatus("syncing", "Reconnexion…"); schedulePrefetch(); });
+window.addEventListener("offline", () => setSyncStatus("offline", offlineLabel()));
 
 /* ---------- COMPRESSION IMAGE ---------- */
 
@@ -3117,7 +3426,7 @@ async function uploadCatalog(file, category){
     type: "catalog",
     catalogId,
     pageCount: pages.length,
-    dataURL: pages[0],
+    thumb: await makeThumbFromDataURL(pages[0], CATALOG_THUMB_MAX_WIDTH, THUMB_QUALITY),
     size: pages.reduce((a, p) => a + p.length, 0),
     date: Date.now()
   });
@@ -3140,6 +3449,7 @@ function setSyncStatus(state, label){
   if(!el) return;
   el.className = "sync-status " + state;
   labelEl.textContent = label;
+  el.title = label;
 }
 
 /* ---------- STATE ---------- */
@@ -3223,10 +3533,10 @@ function getCoverImage(key){
   const chosenId = getCategoryCoverId(key);
   if(chosenId){
     const chosen = allFiles.find(f => f.id === chosenId && f.category === key);
-    if(chosen) return chosen.dataURL;
+    if(chosen) return thumbOf(chosen);
   }
   const f = allFiles.find(f => f.category === key && ((f.type && f.type.startsWith("image/")) || f.type === "catalog"));
-  return f ? f.dataURL : null;
+  return f ? thumbOf(f) : null;
 }
 
 function folderIconSVG(){
@@ -3404,7 +3714,7 @@ function renderCategory(key){
   }
 
   const grid = document.getElementById("fileGrid");
-  const imageUrls = files.filter(f => f.type && f.type.startsWith("image/")).map(f => f.dataURL);
+  const imageFiles = files.filter(f => f.type && f.type.startsWith("image/"));
 
   const addTile = document.createElement("div");
   addTile.className = "add-tile";
@@ -3422,7 +3732,7 @@ function renderCategory(key){
     card.className = "file-card subfolder-card";
     card.innerHTML = `
       <div class="file-thumb">
-        ${cover ? `<img src="${cover.dataURL}">` : folderIconSVG().replace('width="30" height="30"','width="36" height="36"')}
+        ${cover ? `<img src="${thumbOf(cover)}">` : folderIconSVG().replace('width="30" height="30"','width="36" height="36"')}
       </div>
       <div class="file-meta">
         <div class="fn">${sf.name}</div>
@@ -3480,7 +3790,7 @@ function renderCategory(key){
         ${f.pending ? '<span class="pending-badge">Envoi…</span>' : ""}
         ${isCatalog ? `<span class="pages-badge">${f.pageCount} pages</span>` : ""}
         ${isCurrentCover ? `<span class="pages-badge">Couverture</span>` : ""}
-        ${(isImage || isCatalog) ? `<img src="${f.dataURL}">` : fileTypeIconSVG()}
+        ${(isImage || isCatalog) && thumbOf(f) ? `<img src="${thumbOf(f)}">` : fileTypeIconSVG()}
       </div>
       <div class="file-meta">
         <div class="fn" data-id="${f.id}">${f.name}</div>
@@ -3501,7 +3811,7 @@ function renderCategory(key){
       if(e.target.closest(".kebab") || e.target.closest(".kebab-menu")) return;
       if(e.target.closest(".fn-input")) return;
       if(isCatalog) openFlipbook(f);
-      else if(isImage) openLightbox(imageUrls, imageUrls.indexOf(f.dataURL));
+      else if(isImage) openLightbox(imageFiles, imageFiles.indexOf(f));
     });
 
     const kebabBtn = card.querySelector(".kebab");
@@ -3517,7 +3827,7 @@ function renderCategory(key){
       e.stopPropagation();
       menu.classList.remove("show");
       if(isCatalog) openFlipbook(f);
-      else if(isImage) openLightbox(imageUrls, imageUrls.indexOf(f.dataURL));
+      else if(isImage) openLightbox(imageFiles, imageFiles.indexOf(f));
     });
 
     const coverBtn = card.querySelector(".cover-item");
@@ -3654,11 +3964,18 @@ async function handleFiles(fileList, key, folder = null){
       }
       if(file.type && !file.type.startsWith("image/") && file.type !== "application/pdf") continue;
       const {dataURL, type} = await prepareFileForUpload(file);
+      const thumb = type.startsWith("image/") ? await makeThumbFromDataURL(dataURL) : null;
       const id = crypto.randomUUID();
-      await fbFns.setDoc(fbFns.doc(db, "files", id), {
+      // Fichier complet dans fileBlobs, miniature dans files : écrits ensemble (tout ou rien)
+      const batch = fbFns.writeBatch(db);
+      batch.set(fbFns.doc(db, "fileBlobs", id), {dataURL});
+      batch.set(fbFns.doc(db, "files", id), {
         category:key, name:file.name, size:dataURL.length, type,
-        date:Date.now(), dataURL, folder: folder || ""
+        date:Date.now(), thumb: thumb || null, blob:true, folder: folder || ""
       });
+      localBlobIds.add(id);
+      rememberFull(id, dataURL);
+      await batch.commit();
       okCount++;
     }catch(err){
       if(err && err.message === "TOO_LARGE"){
@@ -3805,6 +4122,16 @@ async function deleteFileEverywhere(file){
       const snap = await fbFns.getDocs(q);
       await Promise.all(snap.docs.map(d => fbFns.deleteDoc(d.ref)));
     }
+    if(file.blob){
+      const batch = fbFns.writeBatch(db);
+      batch.delete(fbFns.doc(db, "fileBlobs", file.id));
+      batch.delete(fbFns.doc(db, "files", file.id));
+      fullCache.delete(file.id);
+      localBlobIds.delete(file.id);
+      await batch.commit();
+      showToast("Fichier supprimé");
+      return;
+    }
     await fbFns.deleteDoc(fbFns.doc(db, "files", file.id));
     showToast("Fichier supprimé");
   }catch(err){
@@ -3825,7 +4152,18 @@ function openLightbox(images, index){
   document.getElementById("lightbox").classList.add("show");
 }
 function showLightboxImage(){
-  document.getElementById("lightboxImg").src = lightboxImages[lightboxIndex];
+  const item = lightboxImages[lightboxIndex];
+  const imgEl = document.getElementById("lightboxImg");
+  if(typeof item === "string"){
+    imgEl.src = item;
+  }else{
+    // Miniature tout de suite, puis la photo en grand dès qu'elle est prête
+    const token = (showLightboxImage._token = (showLightboxImage._token || 0) + 1);
+    imgEl.src = thumbOf(item) || "";
+    getFullDataURL(item).then(url => {
+      if(url && showLightboxImage._token === token) imgEl.src = url;
+    });
+  }
   const hasMultiple = lightboxImages.length > 1;
   document.getElementById("lightboxPrev").style.display = hasMultiple ? "flex" : "none";
   document.getElementById("lightboxNext").style.display = hasMultiple ? "flex" : "none";
@@ -3860,8 +4198,7 @@ async function openFlipbook(file){
   overlay.classList.add("show");
 
   try{
-    const q = fbFns.query(fbFns.collection(db, "catalogPages"), fbFns.where("catalogId", "==", file.catalogId));
-    const snap = await fbFns.getDocs(q);
+    const snap = await getCatalogPageDocs(file);
     const pages = snap.docs.map(d => d.data()).sort((a,b) => a.pageIndex - b.pageIndex);
     flipPages = pages.map(p => p.dataURL);
   }catch(err){
@@ -4231,11 +4568,23 @@ if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").catch((e) => console.warn("SW non enregistré", e));
   });
+  // Nouvelle version de l'appli mise en ligne -> rechargement auto (une seule fois)
+  const hadController = !!navigator.serviceWorker.controller;
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if(!hadController || swReloaded || MIGRATION_MODE) return;
+    swReloaded = true;
+    location.reload();
+  });
 }
+
+/* Puter est chargé en async : on rafraîchit le bandeau du simulateur à son arrivée */
+const puterScriptEl = document.getElementById("puterScript");
+if(puterScriptEl) puterScriptEl.addEventListener("load", () => { try{ simRefreshAuthUI(); }catch(e){} });
 
 /* ---------- INIT ---------- */
 
-setSyncStatus(navigator.onLine ? "syncing" : "offline", navigator.onLine ? "Connexion…" : "Hors-ligne (cache local)");
+setSyncStatus(navigator.onLine ? "syncing" : "offline", navigator.onLine ? "Connexion…" : offlineLabel());
 history.replaceState({category:null}, "", "#");
 renderSidebar();
 renderHome();
