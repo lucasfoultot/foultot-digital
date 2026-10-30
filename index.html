@@ -6,7 +6,10 @@
 <title>Foultot Digital</title>
 
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#062b55">
+<meta name="theme-color" content="#002B41">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,18 +19,26 @@
 <style>
 
 :root{
---navy:#062b55;
---navy-light:#0b3d70;
---navy-soft:#eaf0f8;
---bg:#f6f8fb;
---border:#e1e5eb;
---text:#202124;
---text-secondary:#5f6368;
---radius:8px;
---gold:#b8925a;
---gold-soft:#f4ede2;
---retro-accent:#b8925a;
---moderne-accent:#062b55;
+/* Charte Menuiserie Foultot (menuiserie-foultot.com) */
+--navy:#002B41;
+--navy-light:#3A5462;
+--navy-soft:#EFEAE0;
+--bg:#FAF8F2;
+--border:#E2DBCD;
+--text:#16323F;
+--text-secondary:#3A5462;
+--radius:4px;
+--gold:#E5755A;
+--gold-soft:#EFEAE0;
+--retro-accent:#E5755A;
+--corail:#FA9070;
+--corail2:#E5755A;
+--or:#E8A33D;
+--taupe:#8B8475;
+--papier:#FAF8F2;
+--serif:'Fraunces',Georgia,'Times New Roman',serif;
+--sans:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+--moderne-accent:#002B41;
 --intemporel-accent:#3f7d5c;
 --pd-radius:10px;
 }
@@ -36,7 +47,7 @@
 box-sizing:border-box;
 margin:0;
 padding:0;
-font-family:"Segoe UI",Roboto,Arial,sans-serif;
+font-family:var(--sans);
 }
 
 body{
@@ -263,7 +274,7 @@ transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;
 }
 
 .folder-card:hover{
-box-shadow:0 6px 18px rgba(6,43,85,.16);
+box-shadow:0 6px 18px rgba(0,43,65,.16);
 border-color:#c7d2e0;
 transform:translateY(-2px);
 }
@@ -281,7 +292,7 @@ height:100%;
 display:flex;
 align-items:center;
 justify-content:center;
-background:linear-gradient(135deg, #0b3d70, #062b55);
+background:linear-gradient(135deg, #3A5462, #002B41);
 }
 
 .folder-card::after{
@@ -364,7 +375,7 @@ transition:box-shadow .15s ease, border-color .15s ease;
 }
 
 .file-card:hover{
-box-shadow:0 3px 12px rgba(6,43,85,.14);
+box-shadow:0 3px 12px rgba(0,43,65,.14);
 border-color:#c7d2e0;
 }
 
@@ -494,7 +505,7 @@ flex-shrink:0;
 /* SUBFOLDER CARD (regroupement dans un dossier) */
 
 .subfolder-card .file-thumb{
-background:linear-gradient(135deg, #0b3d70, #062b55);
+background:linear-gradient(135deg, #3A5462, #002B41);
 }
 
 .subfolder-card .file-thumb svg path{
@@ -733,7 +744,7 @@ position:fixed;
 bottom:26px;
 left:50%;
 transform:translateX(-50%) translateY(20px);
-background:#202124;
+background:#16323F;
 color:white;
 padding:12px 20px;
 border-radius:6px;
@@ -801,7 +812,7 @@ opacity:.6;
 position:absolute;
 top:6px;
 left:6px;
-background:rgba(6,43,85,.9);
+background:rgba(0,43,65,.9);
 color:#fff;
 font-size:10px;
 font-weight:700;
@@ -814,7 +825,7 @@ z-index:2;
 position:absolute;
 top:6px;
 left:6px;
-background:rgba(6,43,85,.9);
+background:rgba(0,43,65,.9);
 color:#fff;
 font-size:10px;
 font-weight:700;
@@ -1649,19 +1660,19 @@ display:block;
 /* Thèmes : cartes empilées (colonne étroite) */
 .pd-themes{display:flex;flex-direction:column;gap:10px;}
 .pd-theme-card{display:flex;align-items:center;gap:10px;background:white;border:1px solid var(--border);border-radius:var(--pd-radius);padding:10px 12px;cursor:pointer;transition:box-shadow .15s ease, border-color .15s ease;text-align:left;}
-.pd-theme-card:hover{box-shadow:0 6px 14px rgba(6,43,85,.12);border-color:var(--navy-light);}
+.pd-theme-card:hover{box-shadow:0 6px 14px rgba(0,43,65,.12);border-color:var(--navy-light);}
 .pd-theme-visual{width:40px;height:40px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .pd-theme-visual svg{width:24px;height:24px;}
 .pd-theme-body h4{font-size:13px;font-weight:700;color:var(--text);}
 .pd-theme-body p{font-size:10.5px;color:var(--text-secondary);line-height:1.35;margin-top:2px;}
-.pd-theme-card[data-theme="retro"] .pd-theme-visual{background:linear-gradient(135deg,#f4ede2,#e7d4b8);}
-.pd-theme-card[data-theme="moderne"] .pd-theme-visual{background:linear-gradient(135deg,#eaf0f8,#c7d7ea);}
+.pd-theme-card[data-theme="retro"] .pd-theme-visual{background:linear-gradient(135deg,#EFEAE0,#e7d4b8);}
+.pd-theme-card[data-theme="moderne"] .pd-theme-visual{background:linear-gradient(135deg,#EFEAE0,#c7d7ea);}
 .pd-theme-card[data-theme="intemporel"] .pd-theme-visual{background:linear-gradient(135deg,#eaf3ee,#c9ded1);}
 
 /* Modèles : cartes empilées */
 .pd-models{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;}
 .pd-model-card{background:white;border:1px solid var(--border);border-radius:var(--pd-radius);padding:10px 12px;cursor:pointer;transition:box-shadow .15s ease, border-color .15s ease;}
-.pd-model-card:hover{box-shadow:0 6px 14px rgba(6,43,85,.10);border-color:var(--navy-light);}
+.pd-model-card:hover{box-shadow:0 6px 14px rgba(0,43,65,.10);border-color:var(--navy-light);}
 .pd-model-card.selected{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy) inset;}
 .pd-model-card h5{font-size:12.5px;font-weight:700;color:var(--navy);}
 .pd-model-card .pd-model-desc{font-size:10.5px;color:var(--text-secondary);margin-top:3px;line-height:1.4;}
@@ -1697,7 +1708,7 @@ display:block;
 .pd-decor-section.active{display:block;}
 .pd-decors{display:flex;flex-wrap:wrap;gap:7px;}
 .pd-decor-chip{cursor:pointer;font-size:10.5px;font-weight:600;color:var(--navy);background:white;border:1px solid var(--border);border-radius:20px;padding:6px 12px;transition:box-shadow .15s ease, border-color .15s ease;}
-.pd-decor-chip:hover{box-shadow:0 4px 10px rgba(6,43,85,.10);border-color:var(--navy-light);}
+.pd-decor-chip:hover{box-shadow:0 4px 10px rgba(0,43,65,.10);border-color:var(--navy-light);}
 .pd-decor-chip.selected{border-color:var(--navy);background:var(--navy);color:white;}
 
 /* Récapitulatif final du design (remplace le bouton "Valider ma sélection" de l'ancien configurateur) */
@@ -1708,12 +1719,22 @@ display:block;
 .pd-summary-edit:hover{background:rgba(255,255,255,.24);}
 
 /* Bandeau de synthèse affiché une fois le design validé (steps photo + génération restent visibles en dessous) */
-.pd-locked-summary{background:var(--gold-soft);border:1px solid #e9d6b8;border-radius:var(--pd-radius);padding:10px 12px;margin-bottom:14px;}
+.pd-locked-summary{background:var(--gold-soft);border:1px solid #E2DBCD;border-radius:var(--pd-radius);padding:10px 12px;margin-bottom:14px;}
 .pd-locked-summary .pd-locked-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
 .pd-locked-summary .pd-locked-line{font-size:11.5px;color:var(--text);line-height:1.5;}
 .pd-locked-summary button{margin-top:6px;background:none;border:none;color:var(--navy);font-weight:700;font-size:11px;cursor:pointer;padding:0;}
 .pd-locked-summary button:hover{text-decoration:underline;}
 
+
+/* ===== CHARTE MENUISERIE FOULTOT : typo & boutons ===== */
+h1,h2,h3,.breadcrumb,.modal-title,.brand-name{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;}
+.brand-name{font-size:17px;color:var(--navy);}
+.modal-title{font-size:18px;color:var(--navy);}
+.breadcrumb{color:var(--navy);}
+.breadcrumb .crumb-link,.breadcrumb .sep{font-family:var(--sans);}
+.modal-btn-primary,.modal-btn-secondary,.sim-auth-signin-btn,.sim-btn-secondary,.sim-generate-btn{border-radius:0;font-family:var(--sans);}
+.modal-btn-primary:hover,.sim-auth-signin-btn:hover:not(:disabled),.sim-generate-btn:hover:not(:disabled){background:var(--ink,#16323F);}
+::selection{background:var(--corail);color:#fff;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <!-- async : sans réseau (ou en 4G faible), ce script ne bloque plus l'affichage de l'appli -->
@@ -2008,11 +2029,11 @@ display:block;
 
 <div class="kebab-menu grid-context-menu" id="gridContextMenu">
 <button id="ctxImportFiles">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L19 7V20C19 21.1046 18.1046 22 17 22H6C4.89543 22 4 21.1046 4 20V4C4 2.89543 4.89543 2 6 2Z" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2V7H19" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/></svg>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L19 7V20C19 21.1046 18.1046 22 17 22H6C4.89543 22 4 21.1046 4 20V4C4 2.89543 4.89543 2 6 2Z" stroke="#3A5462" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2V7H19" stroke="#3A5462" stroke-width="1.5" stroke-linejoin="round"/></svg>
 <span>Importer des fichiers</span>
 </button>
 <button id="ctxNewFolder">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H9.5L11.5 7H19.5C20.3284 7 21 7.67157 21 8.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="#5f6368" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 11V16M9.5 13.5H14.5" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round"/></svg>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H9.5L11.5 7H19.5C20.3284 7 21 7.67157 21 8.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="#3A5462" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 11V16M9.5 13.5H14.5" stroke="#3A5462" stroke-width="1.5" stroke-linecap="round"/></svg>
 <span>Nouveau dossier</span>
 </button>
 </div>
@@ -2193,8 +2214,8 @@ const CETAL_PORTAIL_MODELS = [
    ============================================================ */
 
 const PD_GATE_ICON = {
-  retro: `<svg viewBox="0 0 64 64" fill="none"><path d="M8 54V16l8-6 8 6v38M32 54V16l8-6 8 6v38" stroke="#b8925a" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="26" r="2" fill="#b8925a"/><circle cx="40" cy="26" r="2" fill="#b8925a"/><path d="M8 44h48M8 34h48" stroke="#b8925a" stroke-width="1.6" opacity=".55"/></svg>`,
-  moderne: `<svg viewBox="0 0 64 64" fill="none"><rect x="8" y="18" width="48" height="34" rx="1" stroke="#062b55" stroke-width="2.2"/><path d="M8 30h48M8 42h48" stroke="#062b55" stroke-width="2.2"/></svg>`,
+  retro: `<svg viewBox="0 0 64 64" fill="none"><path d="M8 54V16l8-6 8 6v38M32 54V16l8-6 8 6v38" stroke="#E5755A" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="26" r="2" fill="#E5755A"/><circle cx="40" cy="26" r="2" fill="#E5755A"/><path d="M8 44h48M8 34h48" stroke="#E5755A" stroke-width="1.6" opacity=".55"/></svg>`,
+  moderne: `<svg viewBox="0 0 64 64" fill="none"><rect x="8" y="18" width="48" height="34" rx="1" stroke="#002B41" stroke-width="2.2"/><path d="M8 30h48M8 42h48" stroke="#002B41" stroke-width="2.2"/></svg>`,
   intemporel: `<svg viewBox="0 0 64 64" fill="none"><path d="M12 52V14M20 52V14M28 52V14M36 52V14M44 52V14M52 52V14" stroke="#3f7d5c" stroke-width="2" stroke-linecap="round"/><path d="M8 24h48" stroke="#3f7d5c" stroke-width="2.2"/></svg>`
 };
 
@@ -2238,7 +2259,7 @@ const PD_WOOD = [
 const pdState = { theme:null, model:null, decor:null, color:null, locked:false };
 
 function pdThemeBg(key){
-  return key === "retro" ? "#f4ede2" : key === "moderne" ? "#eaf0f8" : "#eaf3ee";
+  return key === "retro" ? "#EFEAE0" : key === "moderne" ? "#EFEAE0" : "#eaf3ee";
 }
 
 function pdSetStep(step){
@@ -3147,19 +3168,19 @@ function legacyDocs(){
 function openMigrationPanel(){
   const wrap = document.createElement("div");
   wrap.id = "migrationPanel";
-  wrap.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(6,43,85,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
+  wrap.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,43,65,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
   wrap.innerHTML = `
     <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;padding:22px;font-family:inherit;color:#1d2a3a;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-      <h2 style="margin:0 0 6px;font-size:18px;color:#062b55">Migration : synchro allégée</h2>
+      <h2 style="margin:0 0 6px;font-size:18px;color:#002B41">Migration : synchro allégée</h2>
       <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#5f6b7a">Sépare les miniatures des fichiers complets. À faire une seule fois, sur le PC, en wifi stable. Ne ferme pas la page pendant l'opération.</p>
       <div id="migStats" style="font-size:14px;margin-bottom:14px">Chargement de la liste depuis le serveur…</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <button id="migBackup" disabled style="padding:11px;border-radius:9px;border:1px solid #062b55;background:#fff;color:#062b55;font-weight:700;cursor:pointer">1. Télécharger une sauvegarde (.json)</button>
-        <button id="migRun" disabled style="padding:11px;border-radius:9px;border:none;background:#062b55;color:#fff;font-weight:700;cursor:pointer;opacity:.5">2. Lancer la migration</button>
+        <button id="migBackup" disabled style="padding:11px;border-radius:9px;border:1px solid #002B41;background:#fff;color:#002B41;font-weight:700;cursor:pointer">1. Télécharger une sauvegarde (.json)</button>
+        <button id="migRun" disabled style="padding:11px;border-radius:9px;border:none;background:#002B41;color:#fff;font-weight:700;cursor:pointer;opacity:.5">2. Lancer la migration</button>
         <label style="font-size:12px;color:#5f6b7a;margin-top:6px;cursor:pointer">Restaurer une sauvegarde : <input type="file" id="migRestore" accept=".json,application/json" style="font-size:12px"></label>
       </div>
       <div id="migLog" style="margin-top:14px;font-size:13px;min-height:18px"></div>
-      <div style="text-align:right;margin-top:10px"><button id="migClose" style="background:none;border:none;color:#062b55;font-weight:700;cursor:pointer">Fermer</button></div>
+      <div style="text-align:right;margin-top:10px"><button id="migClose" style="background:none;border:none;color:#002B41;font-weight:700;cursor:pointer">Fermer</button></div>
     </div>`;
   document.body.appendChild(wrap);
 
@@ -3540,7 +3561,7 @@ function getCoverImage(key){
 }
 
 function folderIconSVG(){
-  return '<svg class="folder-icon" width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H9.5L11.5 7H19.5C20.3284 7 21 7.67157 21 8.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" fill="#0b3d70" stroke="#062b55" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  return '<svg class="folder-icon" width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H9.5L11.5 7H19.5C20.3284 7 21 7.67157 21 8.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" fill="#3A5462" stroke="#002B41" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 }
 
 function fileTypeIconSVG(){
@@ -3667,7 +3688,7 @@ function renderHome(){
     const n = counts[c.key] || 0;
     const cover = getCoverImage(c.key);
     card.innerHTML = `
-      ${cover ? `<img src="${cover}">` : `<div class="cover-placeholder">${folderIconSVG().replace('width="30" height="30"','width="40" height="40"').replace('#0b3d70','white').replace('#062b55','white')}</div>`}
+      ${cover ? `<img src="${cover}">` : `<div class="cover-placeholder">${folderIconSVG().replace('width="30" height="30"','width="40" height="40"').replace('#3A5462','white').replace('#002B41','white')}</div>`}
       <div class="folder-top">
         <span class="folder-icon">${folderIconSVG().replace('width="30" height="30"','width="16" height="16"')}</span>
         ${n > 0 ? `<span class="folder-count">${n}</span>` : ""}
@@ -3739,7 +3760,7 @@ function renderCategory(key){
         <div class="fd">${sf.files.length === 0 ? "Dossier vide" : sf.files.length + " photo" + (sf.files.length > 1 ? "s" : "")}</div>
       </div>
       <button class="kebab">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.6" fill="#5f6368"/><circle cx="12" cy="12" r="1.6" fill="#5f6368"/><circle cx="12" cy="19" r="1.6" fill="#5f6368"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.6" fill="#3A5462"/><circle cx="12" cy="12" r="1.6" fill="#3A5462"/><circle cx="12" cy="19" r="1.6" fill="#3A5462"/></svg>
       </button>
       <div class="kebab-menu">
         <button class="rename-folder-item">Renommer</button>
@@ -3797,7 +3818,7 @@ function renderCategory(key){
         <div class="fd">${formatSize(f.size || 0)} · ${formatDate(f.date)}</div>
       </div>
       <button class="kebab" data-id="${f.id}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.6" fill="#5f6368"/><circle cx="12" cy="12" r="1.6" fill="#5f6368"/><circle cx="12" cy="19" r="1.6" fill="#5f6368"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.6" fill="#3A5462"/><circle cx="12" cy="12" r="1.6" fill="#3A5462"/><circle cx="12" cy="19" r="1.6" fill="#3A5462"/></svg>
       </button>
       <div class="kebab-menu" data-id="${f.id}">
         <button class="preview-item">Aperçu</button>
