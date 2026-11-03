@@ -717,6 +717,50 @@ background:rgba(255,255,255,.22);
 .lightbox-prev{left:18px;}
 .lightbox-next{right:18px;}
 
+.lightbox-lowres{
+position:absolute;
+top:22px;
+left:50%;
+transform:translateX(-50%);
+color:#fff;
+font-size:12px;
+font-weight:600;
+background:rgba(201,75,75,.85);
+padding:6px 14px;
+border-radius:14px;
+display:none;
+white-space:nowrap;
+max-width:calc(100% - 120px);
+overflow:hidden;
+text-overflow:ellipsis;
+}
+.lightbox-lowres.show{display:block;}
+.lightbox-lowres.loading{background:rgba(224,165,44,.9);}
+
+.sync-status{cursor:pointer;}
+.hd-panel{
+position:fixed;
+top:64px;
+right:16px;
+z-index:9000;
+width:300px;
+max-width:calc(100vw - 32px);
+background:#fff;
+border-radius:12px;
+box-shadow:0 12px 40px rgba(6,43,85,.25);
+padding:16px;
+font-size:13px;
+color:var(--text);
+display:none;
+}
+.hd-panel.show{display:block;}
+.hd-panel h4{margin:0 0 8px;font-size:15px;color:var(--navy);font-family:var(--serif);font-weight:500;}
+.hd-bar{height:8px;border-radius:4px;background:#e6ebf2;overflow:hidden;margin:8px 0 6px;}
+.hd-bar span{display:block;height:100%;background:#2fa84f;width:0;transition:width .3s;}
+.hd-panel button{width:100%;margin-top:10px;padding:10px;border:none;border-radius:9px;background:var(--navy);color:#fff;font-weight:700;cursor:pointer;}
+.hd-panel button:disabled{opacity:.5;cursor:default;}
+.hd-panel .hd-hint{color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:8px;}
+
 .lightbox-counter{
 position:absolute;
 bottom:22px;
@@ -1817,6 +1861,16 @@ h1,h2,h3,.breadcrumb,.modal-title,.brand-name{font-family:var(--serif);font-weig
 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 6L15 12L9 18" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 <div class="lightbox-counter" id="lightboxCounter"></div>
+<div class="lightbox-lowres" id="lightboxLowres"></div>
+</div>
+
+<div class="hd-panel" id="hdPanel">
+<h4>Photos HD sur cette tablette</h4>
+<div id="hdCount">Calcul…</div>
+<div class="hd-bar"><span id="hdBar"></span></div>
+<div id="hdState" class="hd-hint"></div>
+<button id="hdDownloadBtn">Tout télécharger maintenant</button>
+<div class="hd-hint">À faire en wifi, appli ouverte. L'écran reste allumé pendant le téléchargement : ne change pas d'appli avant 100 %.</div>
 </div>
 
 <div class="flipbook-overlay" id="flipbookOverlay">
@@ -2983,6 +3037,7 @@ function listenToFiles(){
       setSyncStatus("online", "Synchronisé");
       schedulePrefetch();
     }
+    if(snapshot.metadata.fromCache) schedulePrefetch();
     renderSidebar();
     renderCurrentView();
   }, (err) => {
@@ -3091,13 +3146,46 @@ function schedulePrefetch(){
   schedulePrefetch._tm = setTimeout(runPrefetch, 1200);
 }
 
+/* Compteur des photos HD présentes sur cet appareil */
+const hdStats = {have: 0, total: 0, checked: false};
+
+function splitFiles(){
+  return allFiles.filter(f => isSplit(f));
+}
+
+function updateHdStats(){
+  const files = splitFiles();
+  hdStats.total = files.length;
+  hdStats.have = files.filter(f => localBlobIds.has(f.id)).length;
+  renderHdPanel();
+}
+
+function hdComplete(){
+  return hdStats.checked && hdStats.have >= hdStats.total;
+}
+
+/* Écran allumé pendant le téléchargement (sinon Android met l'appli en pause) */
+let wakeLock = null;
+async function keepScreenOn(on){
+  try{
+    if(on && !wakeLock && "wakeLock" in navigator && document.visibilityState === "visible"){
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    }else if(!on && wakeLock){
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  }catch(e){ console.warn("Wake lock indisponible", e); }
+}
+
 async function runPrefetch(){
   if(prefetchRunning || !db) return;
   prefetchRunning = true;
+  renderHdPanel();
   try{
     do{
       prefetchAgain = false;
-      const candidates = allFiles.filter(f => isSplit(f) && !localBlobIds.has(f.id));
+      const candidates = splitFiles().filter(f => !localBlobIds.has(f.id));
 
       // 1) ce qui est déjà sur l'appareil (lecture locale, zéro réseau)
       const missing = [];
@@ -3105,31 +3193,100 @@ async function runPrefetch(){
         const s = await readBlobDoc(f.id, false);
         if(s) localBlobIds.add(f.id); else missing.push(f);
       }
-      if(missing.length === 0) break;
+      hdStats.checked = true;
+      updateHdStats();
+      if(missing.length === 0 || !navigator.onLine) break;
 
       // 2) téléchargement de ce qui manque, quelques fichiers à la fois
-      const total = missing.length;
-      let done = 0;
+      await keepScreenOn(true);
       const queue = missing.slice();
       const worker = async () => {
         while(queue.length && navigator.onLine){
           const f = queue.shift();
           const s = await readBlobDoc(f.id, true);
           if(s) localBlobIds.add(f.id);
-          done++;
-          setSyncStatus("syncing", `Mise hors-ligne ${done}/${total}`);
+          updateHdStats();
+          setSyncStatus("syncing", `Photos HD ${hdStats.have}/${hdStats.total}`);
         }
       };
-      setSyncStatus("syncing", `Mise hors-ligne 0/${total}`);
+      setSyncStatus("syncing", `Photos HD ${hdStats.have}/${hdStats.total}`);
       await Promise.all(Array.from({length: PREFETCH_PARALLEL}, worker));
-      if(navigator.onLine) setSyncStatus("online", "Synchronisé");
-      else setSyncStatus("offline", offlineLabel());
     }while(prefetchAgain && navigator.onLine);
   }catch(err){
     console.error(err);
   }finally{
     prefetchRunning = false;
+    await keepScreenOn(false);
+    updateHdStats();
+    refreshIdleStatus();
   }
+}
+
+/* Libellé du badge au repos : vert seulement si tout est en HD sur la tablette */
+function refreshIdleStatus(){
+  if(prefetchRunning) return;
+  if(!navigator.onLine){ setSyncStatus("offline", offlineLabel()); return; }
+  if(!hdStats.checked) return;
+  if(hdComplete()) setSyncStatus("online", "Synchronisé");
+  else setSyncStatus("syncing", `HD incomplet ${hdStats.have}/${hdStats.total}`);
+}
+
+/* Panneau "Photos HD" (clic sur le badge de synchro) */
+function renderHdPanel(){
+  const panel = document.getElementById("hdPanel");
+  if(!panel) return;
+  const pct = hdStats.total ? Math.round(hdStats.have * 100 / hdStats.total) : 0;
+  document.getElementById("hdCount").innerHTML = hdStats.checked
+    ? `<b>${hdStats.have} / ${hdStats.total}</b> photos (${pct} %)`
+    : "Vérification en cours…";
+  document.getElementById("hdBar").style.width = (hdStats.checked ? pct : 0) + "%";
+  const btn = document.getElementById("hdDownloadBtn");
+  const state = document.getElementById("hdState");
+  if(prefetchRunning){
+    btn.disabled = true;
+    btn.textContent = "Téléchargement en cours…";
+    state.textContent = "Garde l'appli ouverte jusqu'à 100 %.";
+  }else if(!navigator.onLine){
+    btn.disabled = true;
+    btn.textContent = "Tout télécharger maintenant";
+    state.textContent = "Hors-ligne : reconnecte-toi au wifi pour télécharger.";
+  }else if(hdComplete()){
+    btn.disabled = true;
+    btn.textContent = "Tout est déjà téléchargé ✓";
+    state.textContent = "Toutes les photos sont dispo en HD, même sans réseau.";
+  }else{
+    btn.disabled = false;
+    btn.textContent = "Tout télécharger maintenant";
+    state.textContent = hdStats.checked ? `${hdStats.total - hdStats.have} photo(s) à télécharger avant de partir en rendez-vous.` : "";
+  }
+}
+
+function toggleHdPanel(force){
+  const panel = document.getElementById("hdPanel");
+  const show = typeof force === "boolean" ? force : !panel.classList.contains("show");
+  panel.classList.toggle("show", show);
+  if(show){ updateHdStats(); if(!hdStats.checked) schedulePrefetch(); }
+}
+
+document.getElementById("syncStatus").addEventListener("click", (e) => { e.stopPropagation(); toggleHdPanel(); });
+document.getElementById("hdPanel").addEventListener("click", (e) => e.stopPropagation());
+document.addEventListener("click", () => toggleHdPanel(false));
+document.getElementById("hdDownloadBtn").addEventListener("click", () => {
+  if(!db){ showToast("Connexion en cours, réessaie dans un instant"); return; }
+  clearTimeout(schedulePrefetch._tm);
+  runPrefetch();
+});
+
+/* Retour sur l'appli (écran rallumé, changement d'appli) : on reprend où on en était */
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState !== "visible") return;
+  if(prefetchRunning){ keepScreenOn(true); return; }
+  if(db && navigator.onLine && !hdComplete()) schedulePrefetch();
+});
+
+/* Demande à Android de ne pas effacer les photos stockées quand la place manque */
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persisted().then(p => { if(!p) return navigator.storage.persist(); }).catch(() => {});
 }
 
 /* Catalogues : on relit d'abord la copie locale, le réseau seulement si incomplète */
@@ -3339,8 +3496,8 @@ async function removeFolderCover(folderMeta){
   }
 }
 
-window.addEventListener("online", () => { setSyncStatus("syncing", "Reconnexion…"); schedulePrefetch(); });
-window.addEventListener("offline", () => setSyncStatus("offline", offlineLabel()));
+window.addEventListener("online", () => { setSyncStatus("syncing", "Reconnexion…"); renderHdPanel(); schedulePrefetch(); });
+window.addEventListener("offline", () => { setSyncStatus("offline", offlineLabel()); renderHdPanel(); });
 
 /* ---------- COMPRESSION IMAGE ---------- */
 
@@ -4177,12 +4334,25 @@ function showLightboxImage(){
   const imgEl = document.getElementById("lightboxImg");
   if(typeof item === "string"){
     imgEl.src = item;
+    document.getElementById("lightboxLowres").className = "lightbox-lowres";
   }else{
     // Miniature tout de suite, puis la photo en grand dès qu'elle est prête
     const token = (showLightboxImage._token = (showLightboxImage._token || 0) + 1);
-    imgEl.src = thumbOf(item) || "";
+    const lowres = document.getElementById("lightboxLowres");
+    const needsFull = isSplit(item) && !fullCache.has(item.id);
+    imgEl.src = (fullCache.get(item.id)) || thumbOf(item) || "";
+    lowres.className = "lightbox-lowres" + (needsFull ? " show loading" : "");
+    lowres.textContent = navigator.onLine ? "Chargement de la photo HD…" : "Recherche de la photo HD…";
     getFullDataURL(item).then(url => {
-      if(url && showLightboxImage._token === token) imgEl.src = url;
+      if(showLightboxImage._token !== token) return;
+      if(url) imgEl.src = url;
+      const gotFull = !!item.dataURL || fullCache.has(item.id);
+      if(gotFull){
+        lowres.className = "lightbox-lowres";
+      }else if(isSplit(item)){
+        lowres.className = "lightbox-lowres show";
+        lowres.textContent = "Version allégée : photo HD non téléchargée sur cette tablette";
+      }
     });
   }
   const hasMultiple = lightboxImages.length > 1;
