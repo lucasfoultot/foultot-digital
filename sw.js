@@ -3,11 +3,11 @@
    s'ouvre hors-ligne. Les FICHIERS (photos/PDF) ne passent pas par ce cache :
    ils sont gérés par le cache local de Firestore (IndexedDB).
 
-   v3 : la page (index.html) est chargée "réseau d'abord" (3 s max, sinon copie
-   locale) -> une nouvelle version mise en ligne arrive dès la 1re ouverture.
+   v4 : la page (index.html) est chargée "réseau d'abord" (3 s max, sinon copie
+   locale). La nouvelle version est mise en cache même sur réseau lent.
 */
 
-const CACHE_NAME = "foultot-digital-shell-v3";
+const CACHE_NAME = "foultot-digital-shell-v4";
 const NAV_TIMEOUT_MS = 3000;
 const APP_SHELL = [
   "./",
@@ -25,7 +25,7 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE_NAME).then((cache) =>
       // Un fichier manquant ne doit plus bloquer toute l'installation
       Promise.all(APP_SHELL.map((url) =>
-        cache.add(url).catch((err) => console.warn("Non mis en cache :", url, err))
+        cache.add(new Request(url, { cache: "reload" })).catch((err) => console.warn("Non mis en cache :", url, err))
       ))
     )
   );
@@ -42,14 +42,6 @@ self.addEventListener("activate", (event) => {
   );
   self.clients.claim();
 });
-
-function networkWithTimeout(request, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("timeout")), ms);
-    fetch(request).then((res) => { clearTimeout(timer); resolve(res); },
-                        (err) => { clearTimeout(timer); reject(err); });
-  });
-}
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -68,22 +60,25 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.method !== "GET") return;
 
-  // 1) La page elle-même : réseau d'abord (3 s max), sinon copie locale
+  // 1) La page elle-même : réseau d'abord (3 s max), sinon copie locale.
+  //    La réponse réseau est mise en cache même si elle arrive après les 3 s,
+  //    et on revalide auprès du serveur (pas de copie HTTP périmée).
   if (event.request.mode === "navigate" && url.origin === self.location.origin) {
+    const network = fetch(event.request.url, { cache: "no-cache", credentials: "same-origin" });
+    // copie pour le cache, prise AVANT que la page ne lise la réponse
+    const forCache = network.then((r) => (r && r.status === 200 ? r.clone() : null));
+    event.waitUntil(
+      forCache
+        .then((copy) => copy && caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy)))
+        .catch(() => {})
+    );
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), NAV_TIMEOUT_MS));
     event.respondWith(
-      networkWithTimeout(event.request, NAV_TIMEOUT_MS)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", clone));
-          }
-          return response;
-        })
-        .catch(async () =>
-          (await caches.match("./index.html")) ||
-          (await caches.match("./")) ||
-          Response.error()
-        )
+      Promise.race([network, timeout]).catch(async () =>
+        (await caches.match("./index.html")) ||
+        (await caches.match("./")) ||
+        network
+      )
     );
     return;
   }
